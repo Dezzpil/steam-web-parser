@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define your models here
+model Url {
+  id Int @unique @default(autoincrement())
+
+  path      String
+  createdAt DateTime
+  parsedAt  DateTime?
+}
+
+model Game {
+  id Int @unique @default(autoincrement())
+
+  urlId Int
+
+  title       String
+  releasedAt  DateTime
+  developer   String
+  publisher   String
+  genre       String[]
+  popularTags String[]
+}
+
+model MoreGamesLikeThis {
+  thisId    Int
+  anotherId Int
+
+  @@unique([thisId, anotherId])
+}
