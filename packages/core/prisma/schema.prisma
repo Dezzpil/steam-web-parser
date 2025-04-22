@@ -10,29 +10,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Define your models here
-model Url {
-  id Int @unique @default(autoincrement())
-
+model AppUrl {
+  id        Int       @unique
   path      String
-  createdAt DateTime
+  fromAppId Int?
+  createdAt DateTime  @default(now())
+  grabbedAt DateTime?
   parsedAt  DateTime?
 }
 
-model Game {
-  id Int @unique @default(autoincrement())
-
-  urlId Int
-
+model App {
+  id          Int      @unique
   title       String
-  releasedAt  DateTime
-  developer   String
-  publisher   String
+  description String
   genre       String[]
   popularTags String[]
 }
 
-model MoreGamesLikeThis {
+model MoreAppsLikeThis {
   thisId    Int
   anotherId Int
 

@@ -1,14 +1,52 @@
-/**
- * Core package entry point
- */
+import { createBrowser } from './tools/page';
+import { TopSellerGrabber } from './workers/topsellerGrabber';
+import { queue } from 'async';
+import { AppGrabber, AppItem } from './workers/appGrabber';
+import { TaskType } from './tools/task';
 
-// Export existing functionality
-export const greet = (): string => {
-  return 'Hello from Steam Web Parser!';
-};
+if (require.main === module) {
+  (async () => {
+    const browser = await createBrowser();
+    process.on('exit', (code) => {
+      browser.close().finally(() => process.exit(code));
+    });
 
-// Export Prisma client and utilities
-export { default as prisma, testDatabaseConnection } from './prisma';
+    const q = queue<TaskType>((task, callback) => {
+      console.log(`${task.appId}: started`);
+      const appGrabber = new AppGrabber(browser);
+      appGrabber
+        .grabAndParseAppPage(task.href)
+        .then((item: AppItem) => {
+          console.log(`${task.appId}: "${item.title}" parsed: ${item.popularTags}`);
+          appGrabber
+            .grabAndParseMorePage(item.linkToMoreLikeThis)
+            .then((urls) => {
+              console.log(`${task.appId}: more ${urls.length} parsed`);
+              if (urls.length) {
+                q.push(urls);
+                console.log(`${task.appId}: more ${urls.length} added to queue`);
+              }
 
-// Log greeting on import (consider removing this in production)
-console.log(greet());
+              callback();
+            })
+            .catch((e) => {
+              console.error(`${task.appId}: error skipped on 'more' step: ${e.message}`);
+              callback();
+            });
+        })
+        .catch((e) => {
+          console.error(`${task.appId}: error commited on 'app' step: ${e.message}`);
+          callback(e);
+        });
+    }, 2);
+
+    const topSellerGrabber = new TopSellerGrabber(browser);
+    const urls = await topSellerGrabber.grabAndParse();
+    await q.push(urls[0]);
+
+    q.drain(() => {
+      console.log('all tasks processed');
+      process.exit(0);
+    });
+  })();
+}
