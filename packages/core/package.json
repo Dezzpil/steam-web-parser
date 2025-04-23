@@ -23,11 +23,15 @@
     "@prisma/client": "^6.6.0",
     "async": "^3.2.6",
     "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "puppeteer": "^24.7.0"
   },
   "devDependencies": {
     "@types/async": "^3.2.24",
     "@types/cheerio": "^0.22.35",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
     "@types/node": "^22.14.1",
     "prisma": "^6.6.0"
   }

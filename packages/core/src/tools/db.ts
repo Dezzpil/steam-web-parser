@@ -48,3 +48,62 @@ export async function linkApps(appId: number, urls: TaskType[]) {
     skipDuplicates: true,
   });
 }
+
+// API functions for UI
+export async function findAllApps(limit = 20, offset = 0) {
+  return await prisma.app.findMany({
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      genre: true,
+      popularTags: true,
+    },
+    take: limit,
+    skip: offset,
+    orderBy: {
+      title: 'asc',
+    },
+  });
+}
+
+export async function findAppById(id: number) {
+  return await prisma.app.findUnique({
+    where: { id },
+    include: {
+      leftRelations: {
+        select: {
+          rightId: true,
+        },
+      },
+    },
+  });
+}
+
+export async function findRelatedApps(appId: number) {
+  const relations = await prisma.appToApp.findMany({
+    where: { leftId: appId },
+    select: { rightId: true },
+  });
+
+  const relatedIds = relations.map((relation) => relation.rightId);
+
+  return await prisma.app.findMany({
+    where: {
+      id: {
+        in: relatedIds,
+      },
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      genre: true,
+      popularTags: true,
+    },
+  });
+}
+
+export async function countApps() {
+  return await prisma.app.count();
+}
