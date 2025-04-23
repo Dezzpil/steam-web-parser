@@ -1,6 +1,6 @@
 import EventEmitter from 'node:events';
 import { Browser, Page } from 'puppeteer';
-import { getNewBrowserPage } from '../tools/page';
+import { getNewBrowserPage } from '../tools/browser';
 import { TaskType } from '../tools/task';
 import { load } from 'cheerio';
 import TagElement = cheerio.TagElement;
@@ -17,11 +17,13 @@ export class TopSellerGrabber extends EventEmitter {
 
   private _page: Page | undefined;
 
-  async grabAndParse() {
-    this._page = this._page || (await getNewBrowserPage(this._browser));
-    await this._page.goto('https://store.steampowered.com/search/?filter=topsellers', {
-      waitUntil: 'domcontentloaded',
-    });
+  async grabUrls() {
+    if (!this._page) {
+      this._page = await getNewBrowserPage(this._browser);
+      await this._page.goto('https://store.steampowered.com/search/?filter=topsellers', {
+        waitUntil: 'domcontentloaded',
+      });
+    }
     await this._page.waitForSelector('#search_result_container');
     await this._page.waitForSelector('#search_resultsRows');
     const html = await this._page.content();
@@ -43,7 +45,7 @@ export class TopSellerGrabber extends EventEmitter {
 
   private _maxScrollChecks = 3;
 
-  async scroll(): Promise<Array<TaskType>> {
+  async scrollAndGrabUrlsAfter(): Promise<Array<TaskType>> {
     if (!this._page) throw new Error('page not initialized');
 
     this._pageHeight = +((await this._page.evaluate('document.body.scrollHeight')) as string);
@@ -61,7 +63,7 @@ export class TopSellerGrabber extends EventEmitter {
             }
           } else {
             clearInterval(st);
-            this.grabAndParse().then(resolve);
+            this.grabUrls().then(resolve);
           }
         });
       }, 2000);

@@ -16,20 +16,22 @@ model AppUrl {
   fromAppId Int?
   createdAt DateTime  @default(now())
   grabbedAt DateTime?
-  parsedAt  DateTime?
 }
 
 model App {
-  id          Int      @unique
-  title       String
-  description String
-  genre       String[]
-  popularTags String[]
+  id                 Int       @unique
+  title              String
+  description        String
+  genre              String[]
+  popularTags        String[]
+  linkToMoreLikeThis String
+  moreGrabbedAt      DateTime?
+  moreLen            Int?
 }
 
-model MoreAppsLikeThis {
-  thisId    Int
-  anotherId Int
+model AppToApp {
+  leftId  Int
+  rightId Int
 
-  @@unique([thisId, anotherId])
+  @@unique([leftId, rightId])
 }
