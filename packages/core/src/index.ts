@@ -42,11 +42,20 @@ if (require.main === module) {
 
     const topSellerGrabber = new TopSellerGrabber(browser);
     const urls = await topSellerGrabber.grabAndParse();
+    console.log(`top sellers: ${urls.length}`);
     await q.push(urls[0]);
 
     q.drain(() => {
       console.log('all tasks processed');
-      process.exit(0);
+      topSellerGrabber.scroll().then((urls) => {
+        if (urls.length) {
+          console.log(`scrolled to next top sellers: ${urls.length}`);
+          q.push(urls);
+        } else {
+          console.log('no more top sellers, exiting');
+          process.exit(0);
+        }
+      });
     });
   })();
 }
