@@ -16,6 +16,8 @@ model AppUrl {
   fromAppId Int?
   createdAt DateTime  @default(now())
   grabbedAt DateTime?
+
+  App App?
 }
 
 model App {
@@ -27,11 +29,19 @@ model App {
   linkToMoreLikeThis String
   moreGrabbedAt      DateTime?
   moreLen            Int?
+
+  AppUrl AppUrl @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  // Добавляем отношения для связи многие-ко-многим
+  leftRelations AppToApp[] @relation("LeftApp")
 }
 
 model AppToApp {
   leftId  Int
   rightId Int
+
+  // Связываем с моделью App в обоих направлениях
+  leftApp App @relation("LeftApp", fields: [leftId], references: [id], onDelete: Cascade)
 
   @@unique([leftId, rightId])
 }
