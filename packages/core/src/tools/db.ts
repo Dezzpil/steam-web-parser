@@ -11,13 +11,18 @@ export async function findAppUrl(id: number) {
 }
 
 export async function insertApp(id: number, item: AppItem) {
-  // TODO use transaction
-  await prisma.appUrl.update({ where: { id }, data: { grabbedAt: new Date() } });
-  return await prisma.app.create({
-    data: {
-      id,
-      ...item,
-    },
+  return await prisma.$transaction((tx) => {
+    tx.appUrl.update({ where: { id }, data: { grabbedAt: new Date() } });
+    return tx.app.upsert({
+      where: { id },
+      create: {
+        id,
+        ...item,
+      },
+      update: {
+        ...item,
+      },
+    });
   });
 }
 
@@ -38,6 +43,10 @@ export async function createAppsUrls(
   });
 }
 
+export async function saveErrorToAppUrl(id: number, error: string) {
+  await prisma.appUrl.update({ where: { id }, data: { error } });
+}
+
 export async function findNotGrabbedAppsUrls() {
   return await prisma.appUrl.findMany({ where: { grabbedAt: null } });
 }
@@ -49,7 +58,6 @@ export async function linkApps(appId: number, urls: TaskType[]) {
   });
 }
 
-// API functions for UI
 export async function findAllApps(limit = 20, offset = 0) {
   return await prisma.app.findMany({
     select: {

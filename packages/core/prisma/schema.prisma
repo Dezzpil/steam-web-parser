@@ -16,19 +16,29 @@ model AppUrl {
   fromAppId Int?
   createdAt DateTime  @default(now())
   grabbedAt DateTime?
+  error     String?
 
   App App?
 }
 
 model App {
-  id                 Int       @unique
-  title              String
-  description        String
-  genre              String[]
-  popularTags        String[]
-  linkToMoreLikeThis String
-  moreGrabbedAt      DateTime?
-  moreLen            Int?
+  id Int @unique
+
+  title                 String
+  linkToLogoImg         String
+  descriptionMini       String
+  releaseDate           String
+  developers            String[]
+  reviewsSummaryExplain String
+  reviewsSummaryCount   Int      @default(0)
+  genre                 String[]
+  popularTags           String[]
+  categories            String[]
+  description           String
+  linkToMoreLikeThis    String
+
+  moreGrabbedAt DateTime?
+  moreLen       Int?
 
   AppUrl AppUrl @relation(fields: [id], references: [id], onDelete: Cascade)
 

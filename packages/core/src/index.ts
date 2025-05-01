@@ -9,6 +9,7 @@ import {
   findNotGrabbedAppsUrls,
   insertApp,
   linkApps,
+  saveErrorToAppUrl,
   updateAppWithMore,
 } from './tools/db';
 import type { AppUrl, App } from '@prisma/client';
@@ -40,9 +41,10 @@ if (require.main === module) {
       try {
         item = await appGrabber.grabAndParseAppPage(task.href);
         app = await insertApp(appUrl.id, item);
-        console.log(`${task.appId}: "${item.title}" parsed and persisted: ${item.popularTags}`);
+        console.log(`${task.appId}: "${item.title}" parsed and persisted`);
       } catch (e) {
         const err = e as unknown as Error;
+        await saveErrorToAppUrl(appUrl.id, err.message);
         console.error(`${task.appId}: error commited on 'app' step: ${err.message}`);
         await appGrabber.close();
         console.log(`${task.appId}: appGrabber page closed`);
