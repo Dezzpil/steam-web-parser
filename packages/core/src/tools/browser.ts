@@ -17,29 +17,28 @@ export async function createBrowser() {
   const cookies = await page.cookies();
   const sessionIdCookie = cookies.find((cookie) => cookie.name === 'sessionid');
   const sessionId = sessionIdCookie ? sessionIdCookie.value : '';
-
   console.log(`sessionId: ${sessionId}`);
-
   if (sessionId) {
-    // Make POST request to set language
-    await page.evaluate(async (sid) => {
+    const formData = `language=russian&sessionid=${sessionId}`;
+    const result = await page.evaluate(async (formData) => {
       try {
         const response = await fetch('/account/setlanguage/', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': formData.length + '',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            Accept: '*/*',
           },
-          body: JSON.stringify({
-            sessionid: sid,
-            language: 'russian',
-          }),
+          body: formData,
         });
-        return response.ok;
+        const text = await response.text();
+        return { success: response.ok, error: response.statusText + '.' + text };
       } catch (error) {
-        console.error('Error setting language:', error);
-        return false;
+        return { success: false, error: (error as any).message };
       }
-    }, sessionId);
+    }, formData);
+    console.log(`setting language result: ${JSON.stringify(result)}`);
   } else {
     console.warn('No sessionId found, skipping language setting');
   }
