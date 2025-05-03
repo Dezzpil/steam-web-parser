@@ -1,4 +1,4 @@
-import prisma from '../prisma';
+import prisma from './prisma';
 import { AppItem } from '../workers/appGrabber';
 import { TaskType } from './task';
 
@@ -82,7 +82,7 @@ export async function findAppById(id: number) {
   return await prisma.app.findUnique({
     where: { id },
     include: {
-      leftRelations: {
+      Related: {
         select: {
           rightId: true,
         },

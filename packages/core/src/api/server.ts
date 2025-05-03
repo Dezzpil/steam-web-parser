@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { countApps, findAllApps, findAppById, findRelatedApps } from './tools/db';
+import { countApps, findAllApps, findAppById, findRelatedApps } from '../tools/db';
+import dotenv from 'dotenv';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -65,4 +66,17 @@ export function createWebServer(port: number, q: any): Promise<Express.Applicati
       resolve(app);
     });
   });
+}
+
+dotenv.config();
+
+const Port = parseInt(process.env.PORT || '3000');
+if (require.main === module) {
+  createWebServer(Port, [])
+    .then((app) => {
+      console.log(`App ${app} started`);
+    })
+    .catch((error) => {
+      console.error('Error starting server:', error);
+    });
 }

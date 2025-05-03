@@ -43,8 +43,13 @@ model App {
 
   AppUrl AppUrl @relation(fields: [id], references: [id], onDelete: Cascade)
 
-  // Добавляем отношения для связи многие-ко-многим
-  leftRelations AppToApp[] @relation("LeftApp")
+  updatedAt DateTime?
+
+  Related AppToApp[]  @relation("LeftApp")
+  Online  AppOnline[]
+  Price   AppPrice[]
+
+  @@index([updatedAt])
 }
 
 model AppToApp {
@@ -55,4 +60,29 @@ model AppToApp {
   leftApp App @relation("LeftApp", fields: [leftId], references: [id], onDelete: Cascade)
 
   @@unique([leftId, rightId])
+}
+
+model AppOnline {
+  id        Int      @unique @default(autoincrement())
+  appId     Int
+  createdAt DateTime @default(now())
+
+  value Int
+
+  App App @relation(fields: [appId], references: [id], onDelete: Cascade)
+}
+
+model AppPrice {
+  id        Int      @unique @default(autoincrement())
+  appId     Int
+  createdAt DateTime @default(now())
+
+  currency         String
+  initial          Int
+  final            Int
+  discount         Int
+  initialFormatted String
+  finalFormatted   String
+
+  App App @relation(fields: [appId], references: [id], onDelete: Cascade)
 }

@@ -9,7 +9,7 @@ steam-web-parser/
 ├── packages/
 │   └── core/
 │       ├── src/
-│       │   └── index.ts
+│       │   └── crawler.ts
 │       ├── package.json
 │       └── tsconfig.json
 ├── docker-compose.yml

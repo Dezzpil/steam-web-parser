@@ -51,7 +51,7 @@ The Steam Web Parser is a web scraping application designed to collect and analy
 ## Key Files and Their Roles
 
 ### Core Structure
-- `packages/core/src/index.ts`: Main application entry point, sets up the scraping process
+- `packages/core/src/crawler.ts`: Main application entry point, sets up the scraping process
 - `packages/core/src/prisma.ts`: Prisma client initialization
 
 ### Tools

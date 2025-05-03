@@ -13,12 +13,10 @@ import {
   updateAppWithMore,
 } from './tools/db';
 import type { AppUrl, App } from '@prisma/client';
-import { createWebServer } from './server';
 import { createFilteredTopSellerAppUrls } from './tools/url';
 import { writeFileSync } from 'node:fs';
 
 const QueueConcurrency = 3;
-const Port = parseInt(process.env.PORT || '3000');
 
 if (require.main === module) {
   let processed = 0;
@@ -95,8 +93,6 @@ if (require.main === module) {
         console.log(`${task.appId}: appGrabber page closed`);
       }
     }, QueueConcurrency);
-
-    await createWebServer(Port, q);
 
     const orphanedAppsUrlsSet = new Set<number>();
     const orphanedAppsUrls = await findNotGrabbedAppsUrls();
