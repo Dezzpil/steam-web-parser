@@ -18,6 +18,7 @@ export type AppItem = {
   categories: string[];
   description: string;
   linkToMoreLikeThis: string;
+  isDownloadableContent: boolean;
 };
 
 const MoreLikeThisSelector = 'div[data-featuretarget=storeitems-carousel]';
@@ -49,6 +50,20 @@ export class AppGrabber extends EventEmitter {
     }
   }
 
+  async checkIsDownloadableContent(page: Page): Promise<boolean> {
+    try {
+      await page.waitForSelector('#game_area_purchase .game_area_bubble', {
+        timeout: 1000,
+      });
+      return true;
+    } catch (e) {
+      return !e;
+    }
+
+    // game_area_dlc_bubble
+    // game_area_soundtrack_bubble
+  }
+
   async grabAndParseAppPage(url: string): Promise<AppItem> {
     this._page = this._page || (await getNewBrowserPage(this._browser));
     await this._page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -58,9 +73,12 @@ export class AppGrabber extends EventEmitter {
       await this.overcomeAgeWidget(this._page);
     }
 
-    await this._page.waitForSelector(MoreLikeThisSelector, { timeout: 10000 });
-    const html = await this._page.content();
+    const isDownloadableContent = await this.checkIsDownloadableContent(this._page);
+    if (!isDownloadableContent) {
+      await this._page.waitForSelector(MoreLikeThisSelector, { timeout: 10000 });
+    }
 
+    const html = await this._page.content();
     const $ = load(html);
 
     const reviewsBlock = $('#userReviews');
@@ -101,9 +119,11 @@ export class AppGrabber extends EventEmitter {
 
     const description = $('#game_area_description').html();
 
+    let linkToMoreLikeThis = '';
     const moreLikeThisData = $(MoreLikeThisSelector).data();
-    const linkToMoreLikeThis = (moreLikeThisData.props as unknown as { seeAllLink: string })
-      .seeAllLink;
+    if (moreLikeThisData) {
+      linkToMoreLikeThis = (moreLikeThisData.props as unknown as { seeAllLink: string }).seeAllLink;
+    }
 
     return {
       title,
@@ -118,6 +138,7 @@ export class AppGrabber extends EventEmitter {
       categories,
       description,
       linkToMoreLikeThis,
+      isDownloadableContent,
     } as AppItem;
   }
 

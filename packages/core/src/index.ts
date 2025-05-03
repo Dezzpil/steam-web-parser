@@ -14,11 +14,21 @@ import {
 } from './tools/db';
 import type { AppUrl, App } from '@prisma/client';
 import { createWebServer } from './server';
+import { createFilteredTopSellerAppUrls } from './tools/url';
+import { writeFileSync } from 'node:fs';
 
-const QueueConcurrency = 2;
+const QueueConcurrency = 3;
 const Port = parseInt(process.env.PORT || '3000');
 
 if (require.main === module) {
+  let processed = 0;
+  const started = process.hrtime();
+
+  process.on('exit', () => {
+    const ended = process.hrtime(started);
+    writeFileSync('report.txt', JSON.stringify({ processed, ended }));
+  });
+
   (async () => {
     const browser = await createBrowser();
     process.on('exit', (code) => {
@@ -30,6 +40,7 @@ if (require.main === module) {
       try {
         appUrl = await findAppUrl(task.appId);
       } catch (e) {
+        processed++;
         return callback(e as unknown as Error);
       }
 
@@ -41,17 +52,25 @@ if (require.main === module) {
       try {
         item = await appGrabber.grabAndParseAppPage(task.href);
         app = await insertApp(appUrl.id, item);
-        console.log(`${task.appId}: "${item.title}" parsed and persisted`);
+        console.log(`${task.appId}: "${app.title}" parsed and persisted`);
       } catch (e) {
         const err = e as unknown as Error;
         await saveErrorToAppUrl(appUrl.id, err.message);
         console.error(`${task.appId}: error commited on 'app' step: ${err.message}`);
         await appGrabber.close();
         console.log(`${task.appId}: appGrabber page closed`);
+        processed++;
         return callback(err);
       }
 
       try {
+        if (item.linkToMoreLikeThis.trim().length === 0) {
+          console.log(`${task.appId}: no link to more`);
+          await updateAppWithMore(app.id, 0);
+          processed++;
+          return callback && callback();
+        }
+
         const urls = await appGrabber.grabAndParseMorePage(item.linkToMoreLikeThis);
         console.log(`${task.appId}: more ${urls.length} parsed`);
         await updateAppWithMore(app.id, urls.length);
@@ -64,10 +83,12 @@ if (require.main === module) {
             console.log(`${task.appId}: more ${newUrls.length} added to queue`);
           }
         }
+        processed++;
         return callback && callback();
       } catch (e) {
         const err = e as unknown as Error;
         console.error(`${task.appId}: error skipped on 'more' step: ${err.message}`);
+        processed++;
         return callback && callback();
       } finally {
         await appGrabber.close();
@@ -79,37 +100,45 @@ if (require.main === module) {
 
     const orphanedAppsUrlsSet = new Set<number>();
     const orphanedAppsUrls = await findNotGrabbedAppsUrls();
-    console.log(`orphaned apps: ${orphanedAppsUrls.length}`);
+    console.log(`orphaned url apps: ${orphanedAppsUrls.length}`);
     for (const url of orphanedAppsUrls) {
       orphanedAppsUrlsSet.add(url.id);
     }
 
     const topSellerGrabber = new TopSellerGrabber(browser, orphanedAppsUrlsSet);
-    const urls = await topSellerGrabber.grabUrls();
-    console.log(`top sellers: ${urls.length}`);
-    if (urls.length > 0) {
-      await createAppsUrls(urls);
-      await q.push(urls);
-      console.log(`added to queue from top sellers: ${urls.length}`);
-    } else {
-      console.log(`adding orphaned urls ${urls.length} to queue...`);
+
+    const scrollAndFindNewTopSellers = async () => {
+      const newUrls = await createFilteredTopSellerAppUrls(topSellerGrabber, true);
+      if (newUrls.length) {
+        await createAppsUrls(newUrls);
+        await q.push(newUrls);
+        console.log(`added to queue: ${newUrls.length}`);
+      } else {
+        console.log('no more top sellers');
+        await scrollAndFindNewTopSellers();
+      }
+    };
+
+    // стартуем очереди
+    if (orphanedAppsUrls.length) {
+      console.log(`adding orphaned urls ${orphanedAppsUrls.length} to queue...`);
       for (const url of orphanedAppsUrls) {
         await q.push({ appId: url.id, href: url.path });
+      }
+    } else {
+      const newUrls = await createFilteredTopSellerAppUrls(topSellerGrabber);
+      if (newUrls.length > 0) {
+        await createAppsUrls(newUrls);
+        await q.push(newUrls);
+        console.log(`added to queue from top sellers: ${newUrls.length}`);
+      } else {
+        await scrollAndFindNewTopSellers();
       }
     }
 
     q.drain(async () => {
       console.log('all tasks processed');
-      const urls = await topSellerGrabber.scrollAndGrabUrlsAfter();
-      console.log(`scrolled to next top sellers: ${urls.length}`);
-      if (urls.length) {
-        await createAppsUrls(urls);
-        await q.push(urls);
-        console.log(`added to queue: ${urls.length}`);
-      } else {
-        console.log('no more top sellers, exiting');
-        process.exit(0);
-      }
+      await scrollAndFindNewTopSellers();
     });
   })();
 }

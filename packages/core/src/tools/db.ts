@@ -2,18 +2,18 @@ import prisma from '../prisma';
 import { AppItem } from '../workers/appGrabber';
 import { TaskType } from './task';
 
-export async function findAppUrl(id: number) {
+export async function findAppUrl(id: number, throwGrabbedError = true) {
   const appUrl = await prisma.appUrl.findUniqueOrThrow({ where: { id } });
-  if (appUrl.grabbedAt) {
+  if (throwGrabbedError && appUrl.grabbedAt) {
     throw new Error(`appUrl ${id} already grabbed`);
   }
   return appUrl;
 }
 
 export async function insertApp(id: number, item: AppItem) {
-  return await prisma.$transaction((tx) => {
-    tx.appUrl.update({ where: { id }, data: { grabbedAt: new Date() } });
-    return tx.app.upsert({
+  return await prisma.$transaction(async (tx) => {
+    await tx.appUrl.update({ where: { id }, data: { grabbedAt: new Date() } });
+    return await tx.app.upsert({
       where: { id },
       create: {
         id,
@@ -21,6 +21,9 @@ export async function insertApp(id: number, item: AppItem) {
       },
       update: {
         ...item,
+        AppUrl: {
+          connect: { id },
+        },
       },
     });
   });
@@ -48,7 +51,7 @@ export async function saveErrorToAppUrl(id: number, error: string) {
 }
 
 export async function findNotGrabbedAppsUrls() {
-  return await prisma.appUrl.findMany({ where: { grabbedAt: null } });
+  return await prisma.appUrl.findMany({ where: { grabbedAt: null, error: null } });
 }
 
 export async function linkApps(appId: number, urls: TaskType[]) {

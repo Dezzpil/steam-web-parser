@@ -36,6 +36,7 @@ model App {
   categories            String[]
   description           String
   linkToMoreLikeThis    String
+  isDownloadableContent Boolean
 
   moreGrabbedAt DateTime?
   moreLen       Int?
