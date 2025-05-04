@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "App" ADD COLUMN     "lastOnline" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "lastPrice" INTEGER NOT NULL DEFAULT 0;

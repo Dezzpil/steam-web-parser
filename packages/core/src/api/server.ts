@@ -1,11 +1,18 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { countApps, findAllApps, findAppById, findRelatedApps } from '../tools/db';
+import {
+  countApps,
+  findAllApps,
+  findAppById,
+  findRelatedApps,
+  countFreeVsPaidApps,
+  countDownloadableContent,
+} from '../tools/db';
 import dotenv from 'dotenv';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-export function createWebServer(port: number, q: any): Promise<Express.Application> {
+export function createWebServer(port: number, q?: any): Promise<Express.Application> {
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -13,7 +20,7 @@ export function createWebServer(port: number, q: any): Promise<Express.Applicati
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-expect-error
   app.get('/api/queue/length', (req: Request, res: Response) => {
-    return res.json({ length: q.length() });
+    return res.json({ length: q ? q.length() : 0 });
   });
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -22,7 +29,8 @@ export function createWebServer(port: number, q: any): Promise<Express.Applicati
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
-      const apps = await findAllApps(limit, offset);
+      const sortBy = (req.query.sortBy as string) || 'updatedAt';
+      const apps = await findAllApps(limit, offset, sortBy);
       const total = await countApps();
       return res.json({ apps, total });
     } catch (error) {
@@ -60,6 +68,27 @@ export function createWebServer(port: number, q: any): Promise<Express.Applicati
     }
   });
 
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  app.get('/api/stats', async (req, res) => {
+    try {
+      const totalApps = await countApps();
+      const { freeApps, paidApps } = await countFreeVsPaidApps();
+      const { downloadable, nonDownloadable } = await countDownloadableContent();
+
+      return res.json({
+        totalApps,
+        freeApps,
+        paidApps,
+        downloadable,
+        nonDownloadable,
+      });
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+      return res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
+  });
+
   return new Promise((resolve) => {
     app.listen(port, () => {
       console.log(`API server running on port ${port}`);
@@ -72,7 +101,7 @@ dotenv.config();
 
 const Port = parseInt(process.env.PORT || '3000');
 if (require.main === module) {
-  createWebServer(Port, [])
+  createWebServer(Port)
     .then((app) => {
       console.log(`App ${app} started`);
     })

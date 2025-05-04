@@ -1,9 +1,13 @@
-import { App, AppWithRelations, AppsResponse, QueueLengthResponse } from './types';
+import { App, AppWithRelations, AppsResponse, QueueLengthResponse, StatsResponse } from './types';
 
 const API_URL = '/api';
 
-export async function fetchApps(limit = 20, offset = 0): Promise<AppsResponse> {
-  const response = await fetch(`${API_URL}/apps?limit=${limit}&offset=${offset}`);
+export async function fetchApps(
+  limit = 20,
+  offset = 0,
+  sortBy = 'updatedAt',
+): Promise<AppsResponse> {
+  const response = await fetch(`${API_URL}/apps?limit=${limit}&offset=${offset}&sortBy=${sortBy}`);
   if (!response.ok) {
     throw new Error('Failed to fetch apps');
   }
@@ -30,6 +34,14 @@ export async function fetchQueueLength(): Promise<QueueLengthResponse> {
   const response = await fetch(`${API_URL}/queue/length`);
   if (!response.ok) {
     throw new Error('Failed to fetch queue length');
+  }
+  return await response.json();
+}
+
+export async function fetchStats(): Promise<StatsResponse> {
+  const response = await fetch(`${API_URL}/stats`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch statistics');
   }
   return await response.json();
 }

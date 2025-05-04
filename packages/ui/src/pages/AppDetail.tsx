@@ -1,22 +1,29 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import {
-  Row,
-  Col,
-  Card,
-  CardBody,
-  CardTitle,
-  CardText,
-  Badge,
-  Button,
   Spinner,
   Alert,
+  Card,
+  CardBody,
+  Badge,
+  Row,
+  Col,
+  CardHeader,
+  CardTitle,
+  CardSubtitle,
+  Button,
+  Collapse,
 } from 'reactstrap';
 import { fetchAppById, fetchRelatedApps } from '@/api/api';
+import AppList from '@/components/AppList';
+import moment from 'moment';
+import { DateTimeFormat } from '@/tools/date.ts';
 
 function AppDetail() {
   const { id } = useParams<{ id: string }>();
   const appId = parseInt(id || '0');
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const {
     data: app,
@@ -56,81 +63,163 @@ function AppDetail() {
 
   return (
     <div>
-      <div className="mb-4">
-        <Button color="secondary" tag={Link} to="/">
-          &larr; Back to Apps
-        </Button>
-      </div>
+      <Row className={'mb-4 d-flex justify-content-between align-items-stretch'}>
+        <Col md={8}>
+          <Card>
+            <CardBody>
+              <CardTitle tag="h3">{app.title}</CardTitle>
+              <CardSubtitle className="mb-2 text-muted d-flex justify-content-between align-items-center">
+                {app.isDownloadableContent ? <code>Доп. контент</code> : <span>Приложение</span>}
+                <a
+                  href={`https://store.steampowered.com/app/${app.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Steam link
+                </a>
+              </CardSubtitle>
+              <p>{app.descriptionMini}</p>
+              {app.description && app.description.length > 500 ? (
+                <div className="mb-3">
+                  <Collapse isOpen={isDescriptionExpanded}>
+                    <div
+                      className="description-html mb-3"
+                      dangerouslySetInnerHTML={{ __html: app.description }}
+                    />
+                  </Collapse>
+                  <Button
+                    color="link"
+                    className="p-0"
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  >
+                    {isDescriptionExpanded ? 'Скрыть описание' : 'Показать полное описание'}
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className="description-html mb-3"
+                  dangerouslySetInnerHTML={{ __html: app.description }}
+                />
+              )}
+              <h5>Категории</h5>
+              <div className="mb-3">
+                {app.categories.map((cat) => (
+                  <Badge key={cat} color="secondary" className="tag-badge">
+                    {cat}
+                  </Badge>
+                ))}
+              </div>
+              <h5 className="mt-4">Жанры</h5>
+              <div className="mb-3">
+                {app.genre.map((genre) => (
+                  <Badge key={genre} color="primary" className="tag-badge">
+                    {genre}
+                  </Badge>
+                ))}
+              </div>
 
-      <Card className="mb-4">
-        <CardBody>
-          <CardTitle tag="h2">{app.title}</CardTitle>
-          <div className="mb-3">
-            <Button
-              color="success"
-              href={`https://store.steampowered.com/app/${app.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View on Steam
-            </Button>
-          </div>
-          <CardText>{app.description}</CardText>
+              <h5>Популярные теги</h5>
+              <div>
+                {app.popularTags.map((tag) => (
+                  <Badge key={tag} color="success" className="tag-badge">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+        </Col>
+        <Col md={4}>
+          <Card>
+            {app.linkToLogoImg && (
+              <img src={app.linkToLogoImg} alt={`${app.title} logo`} className="img-fluid" />
+            )}
 
-          <h5 className="mt-4">Genres</h5>
-          <div className="mb-3">
-            {app.genre.map((genre) => (
-              <Badge key={genre} color="primary" className="tag-badge">
-                {genre}
-              </Badge>
-            ))}
-          </div>
+            <CardBody className="mb-3">
+              <ul className="list-inline">
+                <li className="list-inline-item">
+                  <b>Релиз:</b>
+                </li>
+                <li className="list-inline-item">{app.releaseDate}</li>
+              </ul>
 
-          <h5>Popular Tags</h5>
-          <div>
-            {app.popularTags.map((tag) => (
-              <Badge key={tag} color="secondary" className="tag-badge">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
+              <ul className="list-inline">
+                <li className="list-inline-item">
+                  <b>Отзывы:</b>
+                </li>
+                <li className="list-inline-item">{app.reviewsSummaryExplain}</li>
+              </ul>
+
+              <ul className="list-inline">
+                <li className="list-inline-item">
+                  <b>Разработчики:</b>
+                </li>
+                {app.developers.length > 0 ? (
+                  <li className="list-inline-item d-inline-flex gap-2">
+                    {app.developers.map((dev) => (
+                      <span>{dev}</span>
+                    ))}
+                  </li>
+                ) : (
+                  <span>&mdash;</span>
+                )}
+              </ul>
+            </CardBody>
+
+            {app.Price && app.Price.length > 0 && (
+              <>
+                <CardHeader>Цена 💵</CardHeader>
+                <ul className="list-group list-group-flush mb-3">
+                  {app.Price.map((price) => (
+                    <li className="list-group-item d-flex justify-content-between align-items-center">
+                      <span className="text-muted">
+                        {moment(price.createdAt).format(DateTimeFormat)}
+                      </span>
+                      {price.discount > 0 ? (
+                        <>
+                          <span className="text-decoration-line-through me-1">
+                            {price.initialFormatted}
+                          </span>
+                          <span className="fw-bold">{price.finalFormatted}</span>
+                          <span className="ms-1 text-success">-{price.discount}%</span>
+                        </>
+                      ) : (
+                        <span>{price.finalFormatted}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {app.Online && app.Online.length > 0 && (
+              <>
+                <CardHeader>Онлайн 🤼</CardHeader>
+                <ul className="list-group list-group-flush mb-3">
+                  {app.Online.map((online) => (
+                    <li
+                      key={online.id}
+                      className="list-group-item d-flex justify-content-between align-items-center"
+                    >
+                      <span className="text-muted">
+                        {moment(online.createdAt).format(DateTimeFormat)}
+                      </span>
+                      <div className="d-flex gap-1 align-items-center">
+                        <span>{online.value.toLocaleString()}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </Card>
+        </Col>
+      </Row>
 
       <h3 className="mb-3">Related Apps</h3>
       {isErrorRelated ? (
         <Alert color="danger">Error loading related apps. Please try again later.</Alert>
       ) : relatedApps && relatedApps.length > 0 ? (
-        <Row>
-          {relatedApps.map((relatedApp) => (
-            <Col key={relatedApp.id} md={4} className="mb-4">
-              <Card className="app-card">
-                <CardBody>
-                  <CardTitle tag="h5">
-                    <Link to={`/app/${relatedApp.id}`}>{relatedApp.title}</Link>
-                  </CardTitle>
-                  <CardText>
-                    {relatedApp.description.length > 100
-                      ? `${relatedApp.description.substring(0, 100)}...`
-                      : relatedApp.description}
-                  </CardText>
-                  <div>
-                    {relatedApp.genre.slice(0, 2).map((genre) => (
-                      <Badge key={genre} color="primary" className="tag-badge">
-                        {genre}
-                      </Badge>
-                    ))}
-                    {relatedApp.popularTags.slice(0, 2).map((tag) => (
-                      <Badge key={tag} color="secondary" className="tag-badge">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardBody>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+        <AppList apps={relatedApps} />
       ) : (
         <Alert color="info">No related apps found.</Alert>
       )}

@@ -26,3 +26,19 @@ body {
   margin-right: 0.25rem;
   margin-bottom: 0.25rem;
 }
+
+.description-html h1, .description-html h2, .description-html h3, .description-html h4 {
+  font-size: 1.25rem;
+}
+
+.description-preview {
+  color: #6c757d;
+  font-style: italic;
+  border-left: 3px solid #dee2e6;
+  padding-left: 10px;
+}
+
+.clearFix {
+  float: none;
+  clear: both;
+}

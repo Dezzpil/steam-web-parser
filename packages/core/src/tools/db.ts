@@ -61,21 +61,48 @@ export async function linkApps(appId: number, urls: TaskType[]) {
   });
 }
 
-export async function findAllApps(limit = 20, offset = 0) {
-  return await prisma.app.findMany({
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      genre: true,
-      popularTags: true,
-    },
+export async function findAllApps(limit = 20, offset = 0, sortBy = 'updatedAt') {
+  const orderBy: any = {};
+  const where: any = {};
+
+  switch (sortBy) {
+    case 'maxOnline':
+      orderBy.lastOnline = 'desc';
+      break;
+    case 'price':
+      orderBy.lastPrice = 'asc';
+      break;
+    case 'free':
+      where.Price = {
+        none: {},
+      };
+      break;
+    case 'updatedAt':
+    default:
+      orderBy.updatedAt = { sort: 'desc', nulls: 'last' };
+      break;
+  }
+
+  const apps = await prisma.app.findMany({
     take: limit,
     skip: offset,
-    orderBy: {
-      title: 'asc',
+    where,
+    include: {
+      Online: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
+      Price: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
     },
+    orderBy,
   });
+
+  return apps;
 }
 
 export async function findAppById(id: number) {
@@ -86,6 +113,18 @@ export async function findAppById(id: number) {
         select: {
           rightId: true,
         },
+      },
+      Online: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 5,
+      },
+      Price: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 5,
       },
     },
   });
@@ -105,16 +144,61 @@ export async function findRelatedApps(appId: number) {
         in: relatedIds,
       },
     },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      genre: true,
-      popularTags: true,
+    include: {
+      Online: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
+      Price: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
     },
   });
 }
 
 export async function countApps() {
   return await prisma.app.count();
+}
+
+export async function countFreeVsPaidApps() {
+  const freeApps = await prisma.app.count({
+    where: {
+      Price: {
+        none: {},
+      },
+    },
+  });
+
+  const paidApps = await prisma.app.count({
+    where: {
+      Price: {
+        some: {
+          final: {
+            gt: 0,
+          },
+        },
+      },
+    },
+  });
+
+  return { freeApps, paidApps };
+}
+
+export async function countDownloadableContent() {
+  const downloadable = await prisma.app.count({
+    where: {
+      isDownloadableContent: true,
+    },
+  });
+
+  const nonDownloadable = await prisma.app.count({
+    where: {
+      isDownloadableContent: false,
+    },
+  });
+
+  return { downloadable, nonDownloadable };
 }

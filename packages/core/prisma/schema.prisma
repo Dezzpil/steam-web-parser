@@ -49,6 +49,9 @@ model App {
   Online  AppOnline[]
   Price   AppPrice[]
 
+  lastOnline Int @default(0)
+  lastPrice  Int @default(0)
+
   @@index([updatedAt])
 }
 

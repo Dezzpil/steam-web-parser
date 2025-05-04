@@ -1,12 +1,19 @@
 import { Routes, Route, Link } from 'react-router-dom';
 import { Container, Navbar, NavbarBrand, Nav, NavItem, Badge } from 'reactstrap';
 import { useState, useEffect } from 'react';
-import { fetchQueueLength } from './api/api';
+import { fetchQueueLength, fetchStats } from './api/api';
 import AppList from './pages/AppList';
 import AppDetail from './pages/AppDetail';
 
 function App() {
   const [queueLength, setQueueLength] = useState<number | null>(null);
+  const [stats, setStats] = useState<{
+    totalApps: number;
+    freeApps: number;
+    paidApps: number;
+    downloadable: number;
+    nonDownloadable: number;
+  } | null>(null);
 
   useEffect(() => {
     // Function to fetch queue length
@@ -19,14 +26,29 @@ function App() {
       }
     };
 
-    // Fetch queue length immediately
+    // Function to fetch statistics
+    const fetchStatistics = async () => {
+      try {
+        const data = await fetchStats();
+        setStats(data);
+      } catch (error) {
+        console.error('Failed to fetch statistics:', error);
+      }
+    };
+
+    // Fetch data immediately
     fetchQueue();
+    fetchStatistics();
 
-    // Set up interval to fetch queue length every 10 seconds
-    const intervalId = setInterval(fetchQueue, 10000);
+    // Set up interval to fetch data every 10 seconds
+    const queueIntervalId = setInterval(fetchQueue, 10000);
+    const statsIntervalId = setInterval(fetchStatistics, 10000);
 
-    // Clean up interval on component unmount
-    return () => clearInterval(intervalId);
+    // Clean up intervals on component unmount
+    return () => {
+      clearInterval(queueIntervalId);
+      clearInterval(statsIntervalId);
+    };
   }, []);
 
   return (
@@ -42,11 +64,30 @@ function App() {
             </Link>
           </NavItem>
         </Nav>
-        {queueLength !== null && (
-          <div className="text-light">
-            Queue: <Badge color="info">{queueLength}</Badge>
-          </div>
-        )}
+        <div className="d-flex gap-3">
+          {stats && (
+            <>
+              <div className="text-light d-flex gap-2 align-items-center">
+                Всего: <Badge color="primary">{stats.totalApps}</Badge>
+              </div>
+              <div className="text-light d-flex gap-2 align-items-center">
+                Платные / Бесплатные:
+                <Badge color="secondary">{stats.paidApps}</Badge>/
+                <Badge color="primary">{stats.freeApps}</Badge>
+              </div>
+              <div className="text-light d-flex gap-2 align-items-center">
+                DLC / Non-DLC:
+                <Badge color="secondary">{stats.downloadable}</Badge>/
+                <Badge color="primary">{stats.nonDownloadable}</Badge>
+              </div>
+            </>
+          )}
+          {queueLength !== null && (
+            <div className="text-light">
+              Queue: <Badge color="info">{queueLength}</Badge>
+            </div>
+          )}
+        </div>
       </Navbar>
       <Container className="py-4">
         <Routes>

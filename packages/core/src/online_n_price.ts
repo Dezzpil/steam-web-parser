@@ -73,7 +73,7 @@ async function getPrices(appIds: number[]): Promise<Record<number, PriceInfo>> {
 }
 
 let cursor: { id: number } | undefined = undefined;
-const oneDayAgoDate = new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 1);
+const oneDayAgoDate = new Date(new Date().getTime() - 1000 * 60 * 60 * 2);
 
 if (require.main === module) {
   (async () => {
@@ -93,8 +93,9 @@ if (require.main === module) {
 
       for (const app of apps) {
         appsIds.push(app.id);
+        let online = 0;
         try {
-          const online = await getCurrentPlayersOnline(app.id);
+          online = await getCurrentPlayersOnline(app.id);
           await prisma.appOnline.create({
             data: {
               appId: app.id,
@@ -107,7 +108,13 @@ if (require.main === module) {
           console.log(`${app.id} - online fetch error: ${(e as any).message}`);
         }
 
-        await prisma.app.update({ where: { id: app.id }, data: { updatedAt: new Date() } });
+        await prisma.app.update({
+          where: { id: app.id },
+          data: {
+            updatedAt: new Date(),
+            lastOnline: online,
+          },
+        });
         console.log(`${app.id} updated`);
         cursor = { id: app.id };
         await sleep(500);
@@ -123,6 +130,13 @@ if (require.main === module) {
             appId,
             createdAt: new Date(),
             ...price,
+          },
+        });
+        await prisma.app.update({
+          where: { id: appId },
+          data: {
+            updatedAt: new Date(),
+            lastPrice: price.final,
           },
         });
         console.log(`${appId} - price ${price ? price.finalFormatted : 0} saved`);
