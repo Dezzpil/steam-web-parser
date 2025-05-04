@@ -66,7 +66,7 @@ async function getPrices(appIds: number[]): Promise<Record<number, PriceInfo>> {
     if (err.response && err.response.status === 429) {
       console.log('429 error, sleeping');
       await sleep(1000 * 60);
-      return getPrices(appIds);
+      return await getPrices(appIds);
     }
   }
   return result;
