@@ -79,6 +79,52 @@ importers:
         specifier: ^6.6.0
         version: 6.6.0(typescript@5.8.3)
 
+  packages/gb:
+    dependencies:
+      '@prisma/client':
+        specifier: ^6.6.0
+        version: 6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3)
+      async:
+        specifier: ^3.2.6
+        version: 3.2.6
+      axios:
+        specifier: ^1.9.0
+        version: 1.9.0
+      cheerio:
+        specifier: ^1.0.0
+        version: 1.0.0
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
+      dotenv:
+        specifier: ^16.5.0
+        version: 16.5.0
+      express:
+        specifier: ^5.1.0
+        version: 5.1.0
+      puppeteer:
+        specifier: ^24.7.0
+        version: 24.7.0(typescript@5.8.3)
+    devDependencies:
+      '@types/async':
+        specifier: ^3.2.24
+        version: 3.2.24
+      '@types/cheerio':
+        specifier: ^0.22.35
+        version: 0.22.35
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.17
+      '@types/express':
+        specifier: ^5.0.1
+        version: 5.0.1
+      '@types/node':
+        specifier: ^22.14.1
+        version: 22.14.1
+      prisma:
+        specifier: ^6.6.0
+        version: 6.6.0(typescript@5.8.3)
+
   packages/ui:
     dependencies:
       '@tanstack/react-query':
