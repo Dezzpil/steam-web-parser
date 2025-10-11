@@ -11,7 +11,13 @@ export class ProductGrabber {
     const url = `https://gamersbase.store/game/${product.skuCode}`;
     console.log(`${product.id}:${product.skuCode} going to ${url}`);
 
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 180000 });
+    } catch (e) {
+      console.log(`${product.id}:${product.skuCode} error: ${(e as any).message}`);
+      await page.close();
+      return [];
+    }
     const content = await page.content();
     const $ = load(content);
     console.log(`${product.id}:${product.skuCode} grabbed ${content.length} bytes`);
