@@ -11,6 +11,7 @@ export type ProductPlatformType = {
 export type ProductType = {
   id: number;
   skuId: number;
+  skuCode: string;
   parentId: number | null;
   name: string;
   type: string;

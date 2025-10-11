@@ -2,7 +2,7 @@ import { launch, Browser, Page } from 'puppeteer';
 
 export async function createBrowser() {
   const browser = await launch({
-    headless: true,
+    headless: false,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     protocolTimeout: 60000,
   });

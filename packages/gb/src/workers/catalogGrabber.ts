@@ -42,7 +42,8 @@ export class CatalogGrabber {
   private _buildProductFromData(item: Record<string, any>): ProductType {
     const p = {
       id: item.productId,
-      skuId: item.skuId,
+      skuId: item.productSkuId,
+      skuCode: item.productSkuCode,
       name: item.name,
       type: item.type,
       parentId: item.parentProductId,
@@ -69,21 +70,22 @@ export class CatalogGrabber {
       return [];
     }
 
-    const result = await this._page.evaluate(async () => {
+    const postBody = JSON.stringify(this._params);
+    const result = await this._page.evaluate(async (body) => {
       try {
         const response = await fetch('/api/v1/catalogs', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(this._params),
+          body: body,
         });
         const data = await response.json();
         return { data, error: null };
       } catch (e) {
         return { data: null, error: (e as any).message };
       }
-    });
+    }, postBody);
     if (result.error) {
       throw new Error(result.error);
     }
@@ -91,7 +93,12 @@ export class CatalogGrabber {
     this._params.continuationToken = result.data.continuationToken;
     await writeFile('./catalog-grabber.json', JSON.stringify(result.data, null, 2), 'utf-8');
 
-    return result.data.map(this._buildProductFromData);
+    if (result.data.products && result.data.products.length) {
+      return result.data.products.map(this._buildProductFromData);
+    } else {
+      this._finished = true;
+      return [];
+    }
   }
 
   isFinished() {
