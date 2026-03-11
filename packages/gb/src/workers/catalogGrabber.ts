@@ -63,7 +63,10 @@ export class CatalogGrabber {
   async grab(): Promise<ProductType[]> {
     if (!this._page) {
       this._page = await getNewBrowserPage(this.browser);
-      await this._page.goto('https://gamersbase.store/catalogs', { waitUntil: 'domcontentloaded' });
+      await this._page.goto('https://gamersbase.store/catalogs', {
+        waitUntil: 'domcontentloaded',
+        timeout: 20000,
+      });
     }
 
     if (this._finished) {

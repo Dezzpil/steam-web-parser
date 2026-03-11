@@ -22,10 +22,11 @@ const QueueConcurrency = 3;
       try {
         await insertProduct(product);
       } catch (e) {
-        // console.log(`${product.id}:${product.skuCode} already exists in db`);
+        console.log(`${product.id}:${product.skuCode} already exists in db`);
         return callback && callback(e as Error);
       }
 
+      console.log(`${product.id}:${product.skuCode} prepare to grab ...`);
       const similar = await productGrabber.grab(product);
       console.log(
         `${product.id}:${product.skuCode} found similar ${similar.length}: ${similar

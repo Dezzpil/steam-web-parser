@@ -11,6 +11,46 @@ The Steam Web Parser is a web scraping application designed to collect and analy
 - **Database**: PostgreSQL for data storage
 - **ORM**: Prisma for database access and management
 
+### Project Structure
+```
+steam-web-parser/
+├── packages/
+│   ├── core/
+│   │   ├── prisma/
+│   │   │   ├── schema.prisma       # Database schema
+│   │   │   └── migrations/         # Database migrations
+│   │   ├── src/
+│   │   │   ├── api/
+│   │   │   │   └── server.ts       # API server
+│   │   │   ├── tools/
+│   │   │   │   ├── browser.ts      # Browser setup
+│   │   │   │   ├── db.ts           # Database operations
+│   │   │   │   ├── task.ts         # Task definitions
+│   │   │   │   ├── url.ts          # URL utilities
+│   │   │   │   └── time.ts         # Time utilities
+│   │   │   ├── workers/
+│   │   │   │   ├── topsellerGrabber.ts  # Top seller scraper
+│   │   │   │   └── appGrabber.ts        # App details scraper
+│   │   │   ├── crawler.ts          # Main scraping process
+│   │   │   └── online_n_price.ts   # Online player and price data collection
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   └── ui/                         # React-based web interface
+│       ├── src/                    # React components and pages
+│       ├── index.html              # Main HTML entry point
+│       ├── package.json
+│       └── tsconfig.json
+├── docker-compose.yml              # Database container setup
+├── package.json
+├── pnpm-workspace.yaml
+├── tsconfig.json
+├── .eslintrc.js
+├── .prettierrc
+├── .eslintignore
+├── .prettierignore
+└── README.md
+```
+
 ### Key Components
 1. **Browser Automation**: Uses Puppeteer for headless browser automation to navigate and scrape Steam pages
 2. **Workers**: Specialized components for different scraping tasks
@@ -118,3 +158,22 @@ The application uses Docker Compose for the database:
 - Persistent volume for database data
 
 The application itself is not containerized in the current setup.
+
+## Code Style and Linting
+
+This project uses ESLint and Prettier to enforce code style and catch potential issues:
+
+- **ESLint**: Static code analysis tool that identifies problematic patterns
+- **Prettier**: Code formatter that ensures consistent code style
+
+### Configuration Files
+
+- `.eslintrc.js`: ESLint configuration
+- `.prettierrc`: Prettier configuration
+- `.eslintignore`: Files to be ignored by ESLint
+- `.prettierignore`: Files to be ignored by Prettier
+
+### Available Scripts
+
+- `pnpm run lint`: Runs ESLint on all TypeScript files and fixes auto-fixable issues
+- `pnpm run format`: Runs Prettier on all TypeScript, JSON, and Markdown files

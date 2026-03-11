@@ -11,7 +11,7 @@ module.exports = {
   rules: {
     // Custom ESLint rules
     'no-console': 'warn',
-    'no-unused-vars': 'off',
+    'no-unused-vars': 'warn',
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
