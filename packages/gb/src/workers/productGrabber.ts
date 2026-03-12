@@ -1,7 +1,7 @@
 import { Browser } from 'puppeteer';
 import { getNewBrowserPage } from '../tools/browser';
 import { load } from 'cheerio';
-import { ProductType } from '../types';
+import { ProductGenreType, ProductPlatformType, ProductType } from '../types';
 
 export class ProductGrabber {
   constructor(public readonly browser: Browser) {}
@@ -23,12 +23,39 @@ export class ProductGrabber {
     console.log(`${product.id}:${product.skuCode} grabbed ${content.length} bytes`);
 
     // div.product-card-same-products
-    const similar: Array<{ name: string; skuId: number }> = [];
+    const similar: ProductType[] = [];
     $('div.product-card-same-products a.js-ecommerce-select-item').each((i, el) => {
       const data = $(el).attr('data-product');
       if (data) {
-        const json = JSON.parse(data);
-        similar.push({ name: json.name, skuId: +json.productSkuId });
+        const item = JSON.parse(data);
+        if (item.productId && item.productSkuId) {
+          const p: ProductType = {
+            id: item.productId,
+            skuId: item.productSkuId,
+            skuCode: item.productSkuCode,
+            name: item.name,
+            type: item.type,
+            parentId: item.parentProductId,
+            isPreorder: item.isPreorder,
+            genres: [] as ProductGenreType[],
+            platforms: [] as ProductPlatformType[],
+            isSale: item.isSale || false,
+            priceStandart: +item.standardPrice || 0,
+            priceActual: +item.actualPrice || 0,
+            currency: item.currency || 'RUB',
+          };
+          if (item.genres) {
+            for (const genre of item.genres) {
+              p.genres.push({ id: genre.id as number, name: genre.name as string });
+            }
+          }
+          if (item.platforms) {
+            for (const platform of item.platforms) {
+              p.platforms.push({ id: platform.id, name: platform.name });
+            }
+          }
+          similar.push(p);
+        }
       }
     });
 

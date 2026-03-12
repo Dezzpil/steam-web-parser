@@ -4,7 +4,7 @@ export async function createBrowser() {
   const browser = await launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    protocolTimeout: 120000,
+    protocolTimeout: 300000,
     timeout: 300000,
     slowMo: 500,
   });

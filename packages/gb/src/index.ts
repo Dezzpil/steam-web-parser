@@ -3,7 +3,7 @@ import { queue } from 'async';
 import { ProductType } from './types';
 import { CatalogGrabber } from './workers/catalogGrabber';
 import { ProductGrabber } from './workers/productGrabber';
-import { insertProduct, insertSimilarForProduct } from './tools/db';
+import { insertProduct, insertSimilarForProduct, isProductExists } from './tools/db';
 import { sleep } from './tools/time';
 
 const QueueConcurrency = 3;
@@ -21,9 +21,9 @@ const QueueConcurrency = 3;
       try {
         await insertProduct(product);
       } catch (e) {
-        console.log(e);
+        // console.log(e);
         console.log(`${product.id}:${product.skuCode} already exists in db`);
-        return callback && callback(e as Error);
+        return callback && callback();
       }
 
       console.log(`${product.id}:${product.skuCode} prepare to grab ...`);
@@ -37,6 +37,15 @@ const QueueConcurrency = 3;
       if (similar.length) {
         console.log(`${product.id}:${product.skuCode} ${similar.length} similar`);
         await insertSimilarForProduct(product.id, similar);
+
+        for (const s of similar) {
+          if (!(await isProductExists(s.id))) {
+            console.log(
+              `${product.id}:${product.skuCode} -> adding similar to queue: ${s.id}:${s.skuCode}`,
+            );
+            q.push(s);
+          }
+        }
       }
       return callback && callback();
     } catch (e) {

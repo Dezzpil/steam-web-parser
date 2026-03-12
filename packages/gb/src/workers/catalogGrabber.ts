@@ -78,30 +78,55 @@ export class CatalogGrabber {
     }
 
     const postBody = JSON.stringify(this._params);
-    const result = await this._page.evaluate(async (body) => {
-      try {
-        const response = await fetch('/api/v1/catalogs', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: body,
-        });
-        const data = await response.json();
-        return { data, error: null };
-      } catch (e) {
-        return { data: null, error: (e as any).message };
+    let attempts = 0;
+    const maxAttempts = 3;
+    let result: { data: any; error: string | null } = { data: null, error: 'unknown' };
+
+    while (attempts < maxAttempts) {
+      result = await this._page.evaluate(async (body) => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+          const response = await fetch('/api/v1/catalogs', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: body,
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+          const data = await response.json();
+          return { data, error: null };
+        } catch (e) {
+          return { data: null, error: (e as any).message };
+        }
+      }, postBody);
+
+      if (!result.error) {
+        break;
       }
-    }, postBody);
+
+      attempts++;
+      console.warn(`Catalog grab attempt ${attempts} failed: ${result.error}. Retrying...`);
+      if (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // wait 5s before retry
+      }
+    }
+
     if (result.error) {
-      throw new Error(result.error);
+      throw new Error(`Failed to grab catalog after ${maxAttempts} attempts: ${result.error}`);
     }
 
     this._params.continuationToken = result.data.continuationToken;
     await writeFile('./catalog-grabber.json', JSON.stringify(result.data, null, 2), 'utf-8');
 
     if (result.data.products && result.data.products.length) {
-      return result.data.products.map(this._buildProductFromData);
+      return result.data.products
+        .filter((item: any) => item.productId && item.productSkuId)
+        .map(this._buildProductFromData);
     } else {
       this._finished = true;
       return [];
