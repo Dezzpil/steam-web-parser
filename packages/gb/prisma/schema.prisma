@@ -11,7 +11,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model ProductGenre {
@@ -27,12 +26,16 @@ model ProductPlatform {
 }
 
 model Product {
-  id         Int     @id
-  skuId      Int
-  skuCode    String
-  name       String
-  type       String
-  isPreorder Boolean
+  id            Int     @id
+  skuId         Int
+  skuCode       String
+  name          String
+  type          String
+  isPreorder    Boolean
+  isSale        Boolean
+  priceStandart Int     @default(0)
+  priceActual   Int     @default(0)
+  currency      String  @default("RUB")
 
   Genres    ProductGenre[]
   Platforms ProductPlatform[]

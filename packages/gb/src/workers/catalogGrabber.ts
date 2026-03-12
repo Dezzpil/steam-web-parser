@@ -40,7 +40,7 @@ export class CatalogGrabber {
   constructor(public readonly browser: Browser) {}
 
   private _buildProductFromData(item: Record<string, any>): ProductType {
-    const p = {
+    const p: ProductType = {
       id: item.productId,
       skuId: item.productSkuId,
       skuCode: item.productSkuCode,
@@ -50,6 +50,10 @@ export class CatalogGrabber {
       isPreorder: item.isPreorder,
       genres: [] as ProductGenreType[],
       platforms: [] as ProductPlatformType[],
+      isSale: item.isSale || false,
+      priceStandart: +item.standardPrice || 0,
+      priceActual: +item.actualPrice || 0,
+      currency: item.currency || 'RUB',
     };
     for (const genre of item.genres) {
       p.genres.push({ id: genre.id as number, name: genre.name as string });

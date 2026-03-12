@@ -18,4 +18,8 @@ export type ProductType = {
   genres: ProductGenreType[];
   platforms: ProductPlatformType[];
   isPreorder: boolean;
+  isSale: boolean;
+  priceStandart: number;
+  priceActual: number;
+  currency: string;
 };

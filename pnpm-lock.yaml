@@ -84,18 +84,21 @@ importers:
       '@types/node':
         specifier: ^25.4.0
         version: 25.4.0
-      '@types/pg-connection-string':
-        specifier: ^2.0.0
-        version: 2.0.0
       prisma:
         specifier: ^7.5.0
         version: 7.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
 
   packages/gb:
     dependencies:
+      '@prisma/adapter-pg':
+        specifier: ^7.5.0
+        version: 7.5.0
       '@prisma/client':
         specifier: ^7.5.0
         version: 7.5.0(prisma@7.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(typescript@5.9.3)
+      '@prisma/client-runtime-utils':
+        specifier: ^7.5.0
+        version: 7.5.0
       async:
         specifier: ^3.2.6
         version: 3.2.6
@@ -798,10 +801,6 @@ packages:
 
   '@types/node@25.4.0':
     resolution: {integrity: sha512-9wLpoeWuBlcbBpOY3XmzSTG3oscB6xjBEEtn+pYXTfhyXhIxC5FsBer2KTopBlvKEiW9l13po9fq+SJY/5lkhw==}
-
-  '@types/pg-connection-string@2.0.0':
-    resolution: {integrity: sha512-J1ZxH9dN0zSwnJpAlbvRlEtwYD/SYmyLMVF4DF0qfTHv0sH0HEg9WK/B24doWGjgcT8InomL0znJwcYHy3lNUw==}
-    deprecated: This is a stub types definition for pg-connection-string (https://github.com/iceddev/pg-connection-string). pg-connection-string provides its own type definitions, so you don't need @types/pg-connection-string installed!
 
   '@types/pg@8.11.11':
     resolution: {integrity: sha512-kGT1qKM8wJQ5qlawUrEkXgvMSXoV213KfMGXcwfDwUIfUHXqXYXOfS1nE1LINRJVVVx5wCm70XnFlMHaIcQAfw==}
@@ -3132,10 +3131,6 @@ snapshots:
   '@types/node@25.4.0':
     dependencies:
       undici-types: 7.18.2
-
-  '@types/pg-connection-string@2.0.0':
-    dependencies:
-      pg-connection-string: 2.12.0
 
   '@types/pg@8.11.11':
     dependencies:

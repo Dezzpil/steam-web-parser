@@ -10,6 +10,10 @@ export async function insertProduct(item: ProductType) {
       parentId: item.parentId,
       skuId: item.skuId,
       isPreorder: item.isPreorder,
+      isSale: item.isSale,
+      priceStandart: item.priceStandart,
+      priceActual: item.priceActual,
+      currency: item.currency,
       skuCode: item.skuCode,
       Genres: {
         connectOrCreate: item.genres.map((genre) => ({

@@ -5,7 +5,6 @@ import { CatalogGrabber } from './workers/catalogGrabber';
 import { ProductGrabber } from './workers/productGrabber';
 import { insertProduct, insertSimilarForProduct } from './tools/db';
 import { sleep } from './tools/time';
-// import { insertSimilarForProduct } from './tools/db';
 
 const QueueConcurrency = 3;
 
@@ -22,6 +21,7 @@ const QueueConcurrency = 3;
       try {
         await insertProduct(product);
       } catch (e) {
+        console.log(e);
         console.log(`${product.id}:${product.skuCode} already exists in db`);
         return callback && callback(e as Error);
       }
