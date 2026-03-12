@@ -1,135 +1,103 @@
 # Steam Web Parser
 
-A monorepo project for Steam web parsing with TypeScript and Docker Compose. The application collects and analyzes data from the Steam store, including game details, genres, tags, pricing, online player counts, and relationships between similar products.
+Монорепозиторный проект на TypeScript для парсинга веб-сайта Steam. Приложение собирает и анализирует данные из магазина Steam, включая информацию об играх, жанрах, тегах, ценах, количестве игроков онлайн и связях между похожими продуктами.
 
-## Project Purpose
+## Цель проекта
 
-The Steam Web Parser is designed to:
+Steam Web Parser предназначен для:
 
-- Scrape game and software information from the Steam store
-- Track online player counts using the Steam API
-- Monitor pricing information and discounts
-- Analyze relationships between similar products
-- Provide a web interface for browsing and visualizing the collected data
+- Сбора информации об играх и программном обеспечении из магазина Steam
+- Отслеживания количества игроков онлайн с помощью Steam API
+- Мониторинга цен
+- Анализа связей между похожими продуктами ("More Like This")
+- Предоставления веб-интерфейса для просмотра и визуализации собранных данных
 
-## Getting Started
+## Архитектура и компоненты
 
-### Prerequisites
+### Общая структура
 
-- Node.js (v14 or later)
-- pnpm (v6 or later)
-- Docker and Docker Compose
+- **Монорепозиторий**: Проект использует подход монорепозитория с рабочими пространствами pnpm.
+- **Пакет Core**: Содержит основную функциональность для парсинга веб-страниц Steam.
+- **База данных**: PostgreSQL для хранения данных.
+- **ORM**: Prisma для доступа к базе данных и управления ею.
 
-### Installation
+### Архитектура и данные
+
+Приложение построено на базе **Puppeteer** для автоматизации браузера в headless-режиме и сбора данных с веб-страниц Steam. 
+Основная логика распределена между специализированными воркерами: **TopSellerGrabber** для списков лидеров продаж, **AppGrabber** для извлечения детальной информации о приложениях 
+и **SearchGrabber** для функционала поиска. Задачи обрабатываются через асинхронную очередь с настраиваемой параллельностью.
+
+Для хранения данных используется **PostgreSQL**, взаимодействие с которой реализовано через **Prisma ORM**. 
+Схема базы данных включает сущности приложений (`App`), их URL-адресов (`AppUrl`) и связей между ними (`AppToApp`), 
+что позволяет анализировать граф рекомендаций "More Like This".
+
+HTTP JSON API позволяет получить краткую информацию о приложениях и рекомендациях "More Like This".
+
+## Начало работы
+
+### Требования
+
+- Node.js (v18 или новее)
+- pnpm (v8 или новее)
+- Docker и Docker Compose
+
+### Установка
 
 ```bash
-corepack use
-corepack enable pnpm
-```
+corepack enable
+corepack use pnpm
 
-### Development
-
-Build all packages:
-
-```bash
 pnpm run build
+docker-compose up -d db
+
+cd packages/core
+pnpm run prisma:generate && pnpm run prisma:migrate
 ```
 
-Start the PostgreSQL database:
+## Запуск компонентов приложения
 
-```bash
-docker compose up db
-```
+### Core (Ядро)
 
-### Running the Application Components
-
-The application consists of several components that can be run separately:
-
-#### Core Package
-
-Run the main crawler to collect app data from Steam:
+Запуск основного краулера в фоне, он будет добирать игры в глубину, которые остались после поиска через API:
 
 ```bash
 cd packages/core
-pnpm run crawler
+pnpm run crawl
 ```
 
-Collect online player counts and price information:
+Или можго запустить сбо данных из каталога Top Sellers:
+
+```bash
+cd packages/core
+pnpm run crawl:top
+```
+
+Сбор данных о количестве игроков онлайн и ценах:
 
 ```bash
 cd packages/core
 pnpm run online_n_price
 ```
 
-Start the API server:
+Запуск API сервера:
 
 ```bash
 cd packages/core
 pnpm run api
 ```
 
-#### UI Package
+### UI (Пользовательский интерфейс)
 
-Start the UI development server:
+Запуск сервера разработки UI:
 
 ```bash
 cd packages/ui
 pnpm run dev
 ```
 
-## API Server
+## Стиль кода и линтинг
 
-The application includes a REST API server that provides access to the collected data. The API server is built with Express.js and provides the following endpoints:
+Проект использует ESLint и Prettier для поддержания стиля кода:
 
-- **GET /api/queue/length**: Get the current length of the processing queue
-- **GET /api/apps**: Get a paginated list of apps
-  - Query parameters:
-    - `limit`: Number of apps to return (default: 20)
-    - `offset`: Number of apps to skip (default: 0)
-  - Returns: `{ apps: App[], total: number }`
-- **GET /api/apps/:id**: Get details for a specific app
-  - Returns: App object with all its properties
-- **GET /api/apps/:id/related**: Get apps related to a specific app
-  - Returns: Array of related App objects
-
-## UI Application
-
-The project includes a web-based user interface for browsing and visualizing the collected data. The UI is built with:
-
-- **React**: Frontend library for building user interfaces
-- **React Router**: For navigation between different views
-- **React Query**: For data fetching and caching
-- **Bootstrap & Reactstrap**: For styling and UI components
-
-The UI connects to the API server to fetch and display data about Steam apps, including their details, online player counts, pricing information, and relationships with other apps.
-
-## Database
-
-The PostgreSQL database is configured with the following settings:
-
-- **Host**: localhost
-- **Port**: 5436 (mapped to 5432 in the container)
-- **Username**: postgres
-- **Password**: postgres
-- **Database**: steam_parser
-
-You can connect to the database using any PostgreSQL client with these credentials.
-
-### Database Management
-
-The project uses Prisma ORM for database management. You can use the following commands:
-
-```bash
-# Generate Prisma client
-pnpm run prisma:generate
-
-# Run database migrations
-pnpm run prisma:migrate
-
-# Open Prisma Studio (database GUI)
-pnpm run prisma:studio
-```
-
-## License
-
-ISC
+- `pnpm run lint`: Запуск ESLint для проверки и исправления ошибок.
+- `pnpm run format`: Форматирование кода с помощью Prettier.

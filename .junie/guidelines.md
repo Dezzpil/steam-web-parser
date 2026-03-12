@@ -18,52 +18,56 @@ The Steam Web Parser is a web scraping application designed to collect and analy
 ```
 steam-web-parser/
 ├── packages/
-│   ├── core/
+│   ├── core/                       # Steam store parser
 │   │   ├── prisma/
-│   │   │   ├── schema.prisma       # Database schema
-│   │   │   └── migrations/         # Database migrations
+│   │   │   └── schema.prisma       # Database schema for Steam data
 │   │   ├── src/
-│   │   │   ├── api/
-│   │   │   │   └── server.ts       # API server
-│   │   │   ├── tools/
-│   │   │   │   ├── browser.ts      # Browser setup
-│   │   │   │   ├── db.ts           # Database operations
-│   │   │   │   ├── task.ts         # Task definitions
-│   │   │   │   ├── url.ts          # URL utilities
-│   │   │   │   └── time.ts         # Time utilities
-│   │   │   ├── workers/
-│   │   │   │   ├── topsellerGrabber.ts  # Top seller scraper
-│   │   │   │   └── appGrabber.ts        # App details scraper
-│   │   │   ├── crawler.ts          # Main scraping process
-│   │   │   └── online_n_price.ts   # Online player and price data collection
+│   │   │   ├── api/                # API server and endpoints
+│   │   │   ├── crawler/
+│   │   │   │   └── base.ts         # Base crawler logic and queue management
+│   │   │   ├── tools/              # Shared utilities (DB, Browser, Prisma, etc.)
+│   │   │   ├── workers/            # Specialized scrapers (App, TopSeller, Search)
+│   │   │   ├── crawl.ts            # Entry point for general app crawling
+│   │   │   ├── crawl_top.ts        # Entry point for top sellers crawling
+│   │   │   └── online_n_price.ts   # Collector for player counts and pricing
 │   │   ├── package.json
 │   │   └── tsconfig.json
-│   └── ui/                         # React-based web interface
-│       ├── src/                    # React components and pages
-│       ├── index.html              # Main HTML entry point
-│       ├── package.json
-│       └── tsconfig.json
-├── docker-compose.yml              # Database container setup
+│   ├── ui/                         # React-based web interface
+│   │   ├── src/                    # React components and pages
+│   │   ├── index.html              # Main HTML entry point
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   └── gb/                         # GB store parser (GameBuy or similar)
+│       ├── prisma/
+│       │   └── schema.prisma       # Database schema for GB data
+│       ├── src/
+│       │   ├── workers/            # GB-specific scrapers
+│       │   └── index.ts            # GB parser entry point
+│       └── package.json
+├── docker-compose.yml              # Database container setup (PostgreSQL)
 ├── package.json
 ├── pnpm-workspace.yaml
 ├── tsconfig.json
 ├── .eslintrc.js
 ├── .prettierrc
-├── .eslintignore
-├── .prettierignore
 └── README.md
 ```
 
 ### Key Components
 
-1. **Browser Automation**: Uses Puppeteer for headless browser automation to navigate and scrape Steam pages
-2. **Workers**: Specialized components for different scraping tasks
-   - `TopSellerGrabber`: Collects top-selling apps from Steam
-   - `AppGrabber`: Extracts detailed information about individual apps
-3. **Database Layer**: Prisma ORM for database operations
-4. **Task Queue**: Async queue for managing concurrent scraping tasks
+1. **Browser Automation**: Uses Puppeteer for headless browser automation to navigate and scrape web pages.
+2. **Workers**: Specialized components for different scraping tasks:
+   - `AppGrabber`: Extracts detailed information about individual Steam apps.
+   - `TopSellerGrabber`: Collects top-selling apps from Steam.
+   - `SearchGrabber`: Searches for apps on Steam by title.
+   - `CatalogGrabber` (in `gb`): Scrapes product catalogs from the GB store.
+3. **Crawler Logic**:
+   - `BaseCrawler`: Manages the task queue (using `async` library) and coordinates workers to scrape and persist data.
+4. **Database Layer**: Prisma ORM for database operations.
+5. **Data Collection**:
+   - `online_n_price.ts`: Periodically updates player counts (via Steam API) and prices for tracked apps.
 
-## Database Structure
+## Database Structure (Steam Parser)
 
 ### Models
 
@@ -73,82 +77,65 @@ steam-web-parser/
    - `path`: URL path to the app page
    - `fromAppId`: Optional reference to the app that led to this one
    - `createdAt`: Timestamp of when the URL was added
-   - `grabbedAt`: Timestamp of when the app was scraped (null if not yet scraped)
-   - Relation: One-to-one with App
+   - `grabbedAt`: Timestamp of when the app was scraped
+   - `forMainLoop`: Boolean flag for the main processing loop
+   - `error`: Error message if scraping failed
 
 2. **App**
 
    - `id`: Unique identifier (matches Steam app ID)
    - `title`: App title
-   - `description`: App description
+   - `description`: Full app description
+   - `descriptionMini`: Short description
+   - `releaseDate`: App release date string
+   - `developers`: Array of developers
    - `genre`: Array of genres
    - `popularTags`: Array of popular tags
+   - `categories`: Array of categories (Single-player, Multi-player, etc.)
    - `linkToMoreLikeThis`: URL to "More Like This" page
-   - `moreGrabbedAt`: Timestamp of when "More Like This" was scraped
-   - `moreLen`: Number of similar apps found
+   - `isDownloadableContent`: Boolean flag for DLCs
+   - `lastOnline`: Latest player count
+   - `lastPrice`: Latest price (final value)
    - Relations:
-     - One-to-one with AppUrl
-     - Many-to-many with other Apps through AppToApp
+     - `Online`: History of player counts (`AppOnline` model)
+     - `Price`: History of prices (`AppPrice` model)
+     - `Related`: Many-to-many with other Apps through `AppToApp`
 
-3. **AppToApp**
-   - `leftId`: ID of the source app
-   - `rightId`: ID of the related app
-   - Represents relationships between apps based on "More Like This" recommendations
+3. **AppOnline / AppPrice**
+   - Store historical data for player counts and pricing (currency, initial, final, discount).
 
 ## Key Files and Their Roles
 
-### Core Structure
+### Core Package (Steam)
 
-- `packages/core/src/crawler.ts`: Main application entry point, sets up the scraping process
-- `packages/core/src/prisma.ts`: Prisma client initialization
+- `packages/core/src/crawl.ts`: Main entry point for crawling orphaned URLs.
+- `packages/core/src/crawl_top.ts`: Specialized entry point for crawling Steam Top Sellers.
+- `packages/core/src/crawler/base.ts`: Contains `BaseCrawler` class with core queue logic.
+- `packages/core/src/online_n_price.ts`: Script for updating real-time data (online/prices).
+- `packages/core/src/tools/prisma.ts`: Prisma client singleton.
 
-### Tools
+### GB Package
 
-- `packages/core/src/tools/browser.ts`: Browser setup and page management
-- `packages/core/src/tools/db.ts`: Database operations
-- `packages/core/src/tools/task.ts`: Task type definition
-- `packages/core/src/tools/url.ts`: URL parsing utilities
+- `packages/gb/src/index.ts`: Main entry point for the GB store parser.
+- `packages/gb/src/workers/catalogGrabber.ts`: Scrapes the product catalog.
 
-### Workers
-
-- `packages/core/src/workers/topsellerGrabber.ts`: Scrapes top seller listings
-- `packages/core/src/workers/appGrabber.ts`: Scrapes individual app pages
-
-### Database
-
-- `packages/core/prisma/schema.prisma`: Database schema definition
-
-### Deployment
-
-- `docker-compose.yml`: Sets up PostgreSQL database container
-
-## How the Application Works
+## How the Application Works (Steam)
 
 1. **Initialization**:
+   - Creates a browser instance with Puppeteer.
+   - `BaseCrawler` sets up an async queue for processing `TaskType` objects.
 
-   - Creates a browser instance with Puppeteer
-   - Sets up an async queue for processing tasks
-
-2. **Initial Data Collection**:
-
-   - Checks for orphaned app URLs (URLs that were added but not yet scraped)
-   - Uses TopSellerGrabber to collect URLs from Steam's top sellers page
+2. **Data Collection Strategies**:
+   - **Orphaned URLs**: `crawl.ts` picks up `AppUrl` records that haven't been grabbed yet.
+   - **Top Sellers**: `crawl_top.ts` uses `TopSellerGrabber` to find new apps from the Steam charts.
+   - **Real-time Data**: `online_n_price.ts` updates player counts and prices for existing apps.
 
 3. **Processing Loop**:
-
-   - For each app URL in the queue:
-     - Uses AppGrabber to scrape the app's page
-     - Extracts title, description, genres, and tags
-     - Stores the data in the database
-     - Navigates to the "More Like This" page
-     - Collects URLs of similar apps
-     - Updates the database with relationships
-     - Adds new app URLs to the queue
-
-4. **Continuous Operation**:
-   - When the queue is empty, scrolls to load more top sellers
-   - Adds new URLs to the queue
-   - Continues until no more top sellers are found
+   - For each task in the queue:
+     - `AppGrabber` scrapes the app's main page and the "More Like This" page.
+     - Extracted data (title, genres, tags, etc.) is stored in the `App` model.
+     - Relationships between apps are created via `AppToApp`.
+     - New discovered app URLs are added to the `AppUrl` table and pushed to the queue if `deep` crawling is enabled.
 
 ## Dependencies
 
@@ -158,12 +145,14 @@ steam-web-parser/
 - `async`: Library for asynchronous patterns, used for the task queue
 - `cheerio`: HTML parsing library
 - `puppeteer`: Headless browser automation
+- `axios`: HTTP client for API requests
+- `express` / `fastify`: Web server frameworks for the API
 
 ### Development Dependencies
 
-- `@types/async`: TypeScript types for async
-- `@types/cheerio`: TypeScript types for cheerio
-- `@types/node`: TypeScript types for Node.js
+- `tsx`: TypeScript execution environment
+- `typescript`: Programming language
+- `eslint` / `prettier`: Linting and formatting tools
 - `prisma`: Prisma ORM CLI and tools
 
 ## Deployment
