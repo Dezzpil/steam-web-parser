@@ -5,6 +5,7 @@ A monorepo project for Steam web parsing with TypeScript and Docker Compose. The
 ## Project Purpose
 
 The Steam Web Parser is designed to:
+
 - Scrape game and software information from the Steam store
 - Track online player counts using the Steam API
 - Monitor pricing information and discounts
@@ -20,6 +21,7 @@ The Steam Web Parser is designed to:
 - Docker and Docker Compose
 
 ### Installation
+
 ```bash
 corepack use
 corepack enable pnpm
@@ -28,11 +30,13 @@ corepack enable pnpm
 ### Development
 
 Build all packages:
+
 ```bash
 pnpm run build
 ```
 
 Start the PostgreSQL database:
+
 ```bash
 docker compose up db
 ```
@@ -67,11 +71,11 @@ pnpm run api
 #### UI Package
 
 Start the UI development server:
+
 ```bash
 cd packages/ui
 pnpm run dev
 ```
-
 
 ## API Server
 
@@ -110,7 +114,6 @@ The PostgreSQL database is configured with the following settings:
 - **Database**: steam_parser
 
 You can connect to the database using any PostgreSQL client with these credentials.
-
 
 ### Database Management
 

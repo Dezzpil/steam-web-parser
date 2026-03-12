@@ -9,22 +9,18 @@ import {
   countDownloadableContent,
 } from '../tools/db';
 import dotenv from 'dotenv';
+import { createBrowser } from '../tools/browser';
+import { processAndNotify } from './searchSimilar';
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-export function createWebServer(port: number, q?: any): Promise<Express.Application> {
+export async function createWebServer(port: number, q?: any): Promise<Express.Application> {
   const app = express();
   app.use(cors());
   app.use(express.json());
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   app.get('/api/queue/length', (req: Request, res: Response) => {
     return res.json({ length: q ? q.length() : 0 });
   });
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   app.get('/api/apps', async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
@@ -39,8 +35,6 @@ export function createWebServer(port: number, q?: any): Promise<Express.Applicat
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   app.get('/api/apps/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -55,8 +49,6 @@ export function createWebServer(port: number, q?: any): Promise<Express.Applicat
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   app.get('/api/apps/:id/related', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -68,8 +60,6 @@ export function createWebServer(port: number, q?: any): Promise<Express.Applicat
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   app.get('/api/stats', async (req, res) => {
     try {
       const totalApps = await countApps();
@@ -89,9 +79,30 @@ export function createWebServer(port: number, q?: any): Promise<Express.Applicat
     }
   });
 
+  const browser = await createBrowser();
+
+  app.post('/api/search-similar', async (req, res) => {
+    const { games, callbackUrl } = req.body;
+
+    if (!games || !Array.isArray(games) || !callbackUrl) {
+      return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    // Start background processing
+    processAndNotify(browser, games, callbackUrl).catch((err: any) => {
+      console.error('Background processing error:', err);
+    });
+
+    return res.status(202).send({
+      status: 'Accepted',
+      message: 'Processing started. Results will be sent to the callback URL.',
+    });
+  });
+
+  // starting server
   return new Promise((resolve) => {
-    app.listen(port, () => {
-      console.log(`API server running on port ${port}`);
+    app.listen(port, '127.0.0.1', () => {
+      console.log(`API running on port ${port}`);
       resolve(app);
     });
   });
@@ -99,13 +110,13 @@ export function createWebServer(port: number, q?: any): Promise<Express.Applicat
 
 dotenv.config();
 
-const Port = parseInt(process.env.PORT || '3000');
+const port = parseInt(process.env.PORT || '3000');
 if (require.main === module) {
-  createWebServer(Port)
-    .then((app) => {
-      console.log(`App ${app} started`);
+  createWebServer(port)
+    .then(() => {
+      // console.log(`API started on port ${port}`);
     })
     .catch((error) => {
-      console.error('Error starting server:', error);
+      console.error('Error starting API:', error);
     });
 }

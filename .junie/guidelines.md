@@ -1,17 +1,20 @@
 # Steam Web Parser
 
 ## Project Purpose
+
 The Steam Web Parser is a web scraping application designed to collect and analyze data from the Steam store. It focuses on gathering information about games and software available on Steam, including their details, genres, tags, and relationships between similar products.
 
 ## Architecture and Components
 
 ### Overall Structure
+
 - **Monorepo Structure**: The project uses a monorepo approach with pnpm workspaces
 - **Core Package**: Contains the main functionality for parsing Steam web pages
 - **Database**: PostgreSQL for data storage
 - **ORM**: Prisma for database access and management
 
 ### Project Structure
+
 ```
 steam-web-parser/
 ├── packages/
@@ -52,6 +55,7 @@ steam-web-parser/
 ```
 
 ### Key Components
+
 1. **Browser Automation**: Uses Puppeteer for headless browser automation to navigate and scrape Steam pages
 2. **Workers**: Specialized components for different scraping tasks
    - `TopSellerGrabber`: Collects top-selling apps from Steam
@@ -62,7 +66,9 @@ steam-web-parser/
 ## Database Structure
 
 ### Models
+
 1. **AppUrl**
+
    - `id`: Unique identifier (matches Steam app ID)
    - `path`: URL path to the app page
    - `fromAppId`: Optional reference to the app that led to this one
@@ -71,6 +77,7 @@ steam-web-parser/
    - Relation: One-to-one with App
 
 2. **App**
+
    - `id`: Unique identifier (matches Steam app ID)
    - `title`: App title
    - `description`: App description
@@ -91,36 +98,44 @@ steam-web-parser/
 ## Key Files and Their Roles
 
 ### Core Structure
+
 - `packages/core/src/crawler.ts`: Main application entry point, sets up the scraping process
 - `packages/core/src/prisma.ts`: Prisma client initialization
 
 ### Tools
+
 - `packages/core/src/tools/browser.ts`: Browser setup and page management
 - `packages/core/src/tools/db.ts`: Database operations
 - `packages/core/src/tools/task.ts`: Task type definition
 - `packages/core/src/tools/url.ts`: URL parsing utilities
 
 ### Workers
+
 - `packages/core/src/workers/topsellerGrabber.ts`: Scrapes top seller listings
 - `packages/core/src/workers/appGrabber.ts`: Scrapes individual app pages
 
 ### Database
+
 - `packages/core/prisma/schema.prisma`: Database schema definition
 
 ### Deployment
+
 - `docker-compose.yml`: Sets up PostgreSQL database container
 
 ## How the Application Works
 
 1. **Initialization**:
+
    - Creates a browser instance with Puppeteer
    - Sets up an async queue for processing tasks
 
 2. **Initial Data Collection**:
+
    - Checks for orphaned app URLs (URLs that were added but not yet scraped)
    - Uses TopSellerGrabber to collect URLs from Steam's top sellers page
 
 3. **Processing Loop**:
+
    - For each app URL in the queue:
      - Uses AppGrabber to scrape the app's page
      - Extracts title, description, genres, and tags
@@ -138,12 +153,14 @@ steam-web-parser/
 ## Dependencies
 
 ### Production Dependencies
+
 - `@prisma/client`: Prisma ORM client
 - `async`: Library for asynchronous patterns, used for the task queue
 - `cheerio`: HTML parsing library
 - `puppeteer`: Headless browser automation
 
 ### Development Dependencies
+
 - `@types/async`: TypeScript types for async
 - `@types/cheerio`: TypeScript types for cheerio
 - `@types/node`: TypeScript types for Node.js
@@ -152,6 +169,7 @@ steam-web-parser/
 ## Deployment
 
 The application uses Docker Compose for the database:
+
 - PostgreSQL 14 container named "steam-parser-db"
 - Database credentials: username: postgres, password: postgres, database: steam_parser
 - Port mapping: 5436 (host) to 5432 (container)

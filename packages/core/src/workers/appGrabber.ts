@@ -68,7 +68,7 @@ export class AppGrabber extends EventEmitter {
     this._page = this._page || (await getNewBrowserPage(this._browser));
     await this._page.goto(url, { waitUntil: 'domcontentloaded' });
     try {
-      await this._page.waitForSelector('#appHubAppName', { timeout: 2000 });
+      await this._page.waitForSelector('#appHubAppName', { timeout: 5000 });
     } catch (e) {
       await this.overcomeAgeWidget(this._page);
     }
@@ -83,7 +83,8 @@ export class AppGrabber extends EventEmitter {
 
     const reviewsBlock = $('#userReviews');
     const targetReviewsBlock = reviewsBlock.find('div.user_reviews_summary_row').last();
-    const reviewsSummaryExplain = targetReviewsBlock.data('tooltip-html');
+    let reviewsSummaryExplain = targetReviewsBlock.data('tooltip-html');
+    if (!reviewsSummaryExplain) reviewsSummaryExplain = '-';
     const reviewsSummaryCountStr = targetReviewsBlock.find('span.responsive_hidden').text();
     const reviewsSummaryCount = +reviewsSummaryCountStr.replace(/\D+/g, '');
 
@@ -148,7 +149,7 @@ export class AppGrabber extends EventEmitter {
 
     for (const selector of MoreLikeThisSectionsSelectors) {
       try {
-        await this._page.waitForSelector(selector, { visible: true, timeout: 5000 });
+        await this._page.waitForSelector(selector, { visible: true, timeout: 10000 });
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         // skip
@@ -165,7 +166,8 @@ export class AppGrabber extends EventEmitter {
         .each((i, el) => {
           const href = (el as TagElement).attribs.href;
           const appId = href.match(/app\/(\d+)\//)?.[1];
-          if (appId) urls.push({ href, appId: +appId });
+          const title = $(el).find('div.similar_grid_item_name').text().trim();
+          if (appId) urls.push({ href, appId: +appId, title: title || undefined });
         });
     }
 

@@ -1,1 +1,7 @@
-export type TaskType = { href: string; appId: number; fromAppId?: number };
+export type TaskType = {
+  href: string;
+  appId: number;
+  forMainLoop: boolean;
+  fromAppId?: number;
+  title?: string;
+};

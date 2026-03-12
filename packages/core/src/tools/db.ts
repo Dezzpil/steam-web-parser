@@ -1,6 +1,7 @@
 import prisma from './prisma';
 import { AppItem } from '../workers/appGrabber';
 import { TaskType } from './task';
+import { AppUrl } from '../../generated/client';
 
 export async function findAppUrl(id: number, throwGrabbedError = true) {
   const appUrl = await prisma.appUrl.findUniqueOrThrow({ where: { id } });
@@ -11,9 +12,9 @@ export async function findAppUrl(id: number, throwGrabbedError = true) {
 }
 
 export async function insertApp(id: number, item: AppItem) {
-  return await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     await tx.appUrl.update({ where: { id }, data: { grabbedAt: new Date() } });
-    return await tx.app.upsert({
+    return tx.app.upsert({
       where: { id },
       create: {
         id,
@@ -36,13 +37,33 @@ export async function updateAppWithMore(id: number, len: number) {
 export async function createAppsUrls(
   urls: Array<TaskType>,
   fromAppId: number | null = null,
+  forMainLoop = false,
+  foundByTerm: string | null = null,
 ): Promise<Array<TaskType>> {
   const appUrls = await prisma.appUrl.createManyAndReturn({
-    data: urls.map((url) => ({ id: url.appId, path: url.href, fromAppId })),
+    data: urls.map((url) => ({
+      id: url.appId,
+      path: url.href,
+      fromAppId,
+      forMainLoop,
+      foundByTerm,
+    })),
     skipDuplicates: true,
   });
-  return appUrls.map((appUrl) => {
-    return { appId: appUrl.id, href: appUrl.path, fromAppId: fromAppId || undefined };
+  return appUrls.map((appUrl: AppUrl) => {
+    return {
+      appId: appUrl.id,
+      href: appUrl.path,
+      fromAppId: appUrl.fromAppId || undefined,
+      forMainLoop: appUrl.forMainLoop,
+    };
+  });
+}
+
+export async function updateAppsUrlForMainLoop(tasks: TaskType[]) {
+  await prisma.appUrl.updateMany({
+    where: { id: { in: tasks.map((task) => task.appId) } },
+    data: { forMainLoop: true },
   });
 }
 
@@ -50,8 +71,8 @@ export async function saveErrorToAppUrl(id: number, error: string) {
   await prisma.appUrl.update({ where: { id }, data: { error } });
 }
 
-export async function findNotGrabbedAppsUrls() {
-  return await prisma.appUrl.findMany({ where: { grabbedAt: null, error: null } });
+export async function findNotGrabbedAppsUrls(forMainLoop = true) {
+  return prisma.appUrl.findMany({ where: { grabbedAt: null, error: null, forMainLoop } });
 }
 
 export async function linkApps(appId: number, urls: TaskType[]) {
@@ -83,7 +104,7 @@ export async function findAllApps(limit = 20, offset = 0, sortBy = 'updatedAt') 
       break;
   }
 
-  const apps = await prisma.app.findMany({
+  return prisma.app.findMany({
     take: limit,
     skip: offset,
     where,
@@ -101,12 +122,10 @@ export async function findAllApps(limit = 20, offset = 0, sortBy = 'updatedAt') 
     },
     orderBy,
   });
-
-  return apps;
 }
 
 export async function findAppById(id: number) {
-  return await prisma.app.findUnique({
+  return prisma.app.findUnique({
     where: { id },
     include: {
       Related: {
@@ -130,15 +149,31 @@ export async function findAppById(id: number) {
   });
 }
 
+export async function findRelatedAppsForApps(ids: number[]) {
+  const rels = await prisma.appToApp.findMany({
+    where: { leftId: { in: ids } },
+    select: { rightId: true },
+  });
+
+  return prisma.app.findMany({
+    where: { id: { in: rels.map((rel) => rel.rightId) } },
+    select: {
+      id: true,
+      title: true,
+      genre: true,
+    },
+  });
+}
+
 export async function findRelatedApps(appId: number) {
   const relations = await prisma.appToApp.findMany({
     where: { leftId: appId },
     select: { rightId: true },
   });
 
-  const relatedIds = relations.map((relation) => relation.rightId);
+  const relatedIds = relations.map((relation: { rightId: number }) => relation.rightId);
 
-  return await prisma.app.findMany({
+  return prisma.app.findMany({
     where: {
       id: {
         in: relatedIds,
@@ -160,7 +195,7 @@ export async function findRelatedApps(appId: number) {
 }
 
 export async function countApps() {
-  return await prisma.app.count();
+  return prisma.app.count();
 }
 
 export async function countFreeVsPaidApps() {

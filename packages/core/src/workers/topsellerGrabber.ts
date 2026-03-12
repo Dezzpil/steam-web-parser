@@ -24,6 +24,7 @@ export class TopSellerGrabber extends EventEmitter {
         waitUntil: 'domcontentloaded',
       });
     }
+
     await this._page.waitForSelector('#search_result_container');
     await this._page.waitForSelector('#search_resultsRows');
     const html = await this._page.content();

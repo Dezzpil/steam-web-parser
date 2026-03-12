@@ -3,20 +3,22 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../generated/client" // Custom path
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model AppUrl {
-  id        Int       @unique
-  path      String
-  fromAppId Int?
-  createdAt DateTime  @default(now())
-  grabbedAt DateTime?
-  error     String?
+  id          Int       @unique
+  path        String
+  fromAppId   Int?
+  createdAt   DateTime  @default(now())
+  grabbedAt   DateTime?
+  error       String?
+  forMainLoop Boolean   @default(false)
+  foundByTerm String?
 
   App App?
 }
