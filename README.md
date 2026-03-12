@@ -48,52 +48,55 @@ corepack enable
 corepack use pnpm
 
 pnpm run build
-docker-compose up -d db
+```
 
+Указать переменные окружения:
+```shell
 cd packages/core
+cp .env.example .env
+```
+
+Запустить БД и создать схему:
+```shell
+docker-compose up -d db
 pnpm run prisma:generate && pnpm run prisma:migrate
 ```
 
 ## Запуск компонентов приложения
 
-### Core (Ядро)
-
-Запуск основного краулера в фоне, он будет добирать игры в глубину, которые остались после поиска через API:
-
+Запуск основного краулера в фоне, он будет добирать игры в глубину, которые остались после поиска через API
 ```bash
 cd packages/core
 pnpm run crawl
 ```
 
-Или можго запустить сбо данных из каталога Top Sellers:
-
+Или можго запустить сбо данных из каталога Top Sellers
 ```bash
 cd packages/core
 pnpm run crawl:top
 ```
 
-Сбор данных о количестве игроков онлайн и ценах:
-
-```bash
-cd packages/core
-pnpm run online_n_price
-```
-
-Запуск API сервера:
-
+Запуск API сервера
 ```bash
 cd packages/core
 pnpm run api
 ```
 
-### UI (Пользовательский интерфейс)
-
-Запуск сервера разработки UI:
-
+Запуск UI
 ```bash
 cd packages/ui
 pnpm run dev
 ```
+
+
+Сбор данных о количестве игроков онлайн и ценах
+```bash
+cd packages/core
+pnpm run online_n_price
+```
+
+Для сбора данных потребуется указать `STEAM_API_KEY` в `packages/core/.env`. Это ключ для Steam Web-API, который можно получить по адресу https://steamcommunity.com/dev/apikey
+
 
 ## Стиль кода и линтинг
 

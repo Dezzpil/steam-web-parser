@@ -5,12 +5,21 @@ import { App } from '@prisma/client';
 import { sleep } from './tools/time';
 
 dotenv.config();
-
 const SteamApiKey = process.env.STEAM_API_KEY;
+type PriceInfo = {
+  finalFormatted: string;
+  final: number;
+  initialFormatted: string;
+  initial: number;
+  discount: number;
+  currency: string;
+};
+let onlineMethodIsBroken = false;
 
 async function getCurrentPlayersOnline(appId: number): Promise<number> {
   const response = await axios.get(
     'https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/',
+    // 'https://partner.steam-api.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/',
     {
       params: {
         key: SteamApiKey,
@@ -24,15 +33,6 @@ async function getCurrentPlayersOnline(appId: number): Promise<number> {
   }
   return 0;
 }
-
-type PriceInfo = {
-  finalFormatted: string;
-  final: number;
-  initialFormatted: string;
-  initial: number;
-  discount: number;
-  currency: string;
-};
 
 async function getPrices(appIds: number[]): Promise<Record<number, PriceInfo>> {
   const result: Record<number, PriceInfo> = {};
@@ -93,6 +93,7 @@ if (require.main === module) {
 
       for (const app of apps) {
         appsIds.push(app.id);
+        if (onlineMethodIsBroken) continue;
         let online = 0;
         try {
           online = await getCurrentPlayersOnline(app.id);
@@ -106,6 +107,8 @@ if (require.main === module) {
           console.log(`${app.id} - online ${online} saved`);
         } catch (e) {
           console.log(`${app.id} - online fetch error: ${(e as any).message}`);
+          onlineMethodIsBroken = true;
+          continue;
         }
 
         await prisma.app.update({
@@ -115,7 +118,6 @@ if (require.main === module) {
             lastOnline: online,
           },
         });
-        console.log(`${app.id} updated`);
         cursor = { id: app.id };
         await sleep(500);
       }
