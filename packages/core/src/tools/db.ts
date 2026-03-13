@@ -194,6 +194,29 @@ export async function findRelatedApps(appId: number) {
   });
 }
 
+export async function findAppByTitle(title: string): Promise<TaskType | null> {
+  const app = await prisma.app.findFirst({
+    where: {
+      title: {
+        equals: title,
+        mode: 'insensitive',
+      },
+    },
+    include: {
+      AppUrl: true,
+    },
+  });
+
+  if (!app) return null;
+
+  return {
+    appId: app.id,
+    href: app.AppUrl.path,
+    forMainLoop: app.AppUrl.forMainLoop,
+    title: app.title,
+  };
+}
+
 export async function countApps() {
   return prisma.app.count();
 }
@@ -236,4 +259,32 @@ export async function countDownloadableContent() {
   });
 
   return { downloadable, nonDownloadable };
+}
+
+export async function findAppUrlsFoundBySearch(limit = 20, offset = 0) {
+  const [appUrls, total] = await Promise.all([
+    prisma.appUrl.findMany({
+      where: {
+        foundByTerm: {
+          not: null,
+        },
+      },
+      include: {
+        App: true,
+      },
+      take: limit,
+      skip: offset,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    }),
+    prisma.appUrl.count({
+      where: {
+        foundByTerm: {
+          not: null,
+        },
+      },
+    }),
+  ]);
+  return { appUrls, total };
 }

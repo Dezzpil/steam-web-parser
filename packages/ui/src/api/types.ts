@@ -57,3 +57,17 @@ export interface StatsResponse {
   downloadable: number;
   nonDownloadable: number;
 }
+
+export interface AppUrl {
+  id: number;
+  path: string;
+  foundByTerm: string | null;
+  createdAt: string;
+  grabbedAt: string | null;
+  App?: App | null;
+}
+
+export interface SearchResultsResponse {
+  appUrls: AppUrl[];
+  total: number;
+}

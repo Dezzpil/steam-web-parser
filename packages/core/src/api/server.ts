@@ -10,6 +10,7 @@ import {
   findRelatedApps,
   countFreeVsPaidApps,
   countDownloadableContent,
+  findAppUrlsFoundBySearch,
 } from '../tools/db';
 import dotenv from 'dotenv';
 import { createBrowser } from '../tools/browser';
@@ -277,6 +278,58 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
     } catch (error) {
       console.error('Error fetching statistics:', error);
       return res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
+  });
+
+  /**
+   * @openapi
+   * /api/search-results:
+   *   get:
+   *     summary: Get a list of app URLs found by search
+   *     parameters:
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *         description: Maximum number of results to return
+   *       - in: query
+   *         name: offset
+   *         schema:
+   *           type: integer
+   *           default: 0
+   *         description: Number of results to skip
+   *     responses:
+   *       200:
+   *         description: A list of search results and total count
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 appUrls:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id: { type: 'integer' }
+   *                       path: { type: 'string' }
+   *                       foundByTerm: { type: 'string' }
+   *                       createdAt: { type: 'string', format: 'date-time' }
+   *                       grabbedAt: { type: 'string', format: 'date-time', nullable: true }
+   *                       App: { $ref: '#/components/schemas/App', nullable: true }
+   *                 total:
+   *                   type: integer
+   */
+  app.get('/api/search-results', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const { appUrls, total } = await findAppUrlsFoundBySearch(limit, offset);
+      return res.json({ appUrls, total });
+    } catch (error) {
+      console.error('Error fetching search results:', error);
+      return res.status(500).json({ error: 'Failed to fetch search results' });
     }
   });
 

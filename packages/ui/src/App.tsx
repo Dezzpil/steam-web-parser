@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { fetchQueueLength, fetchStats } from './api/api';
 import AppList from './pages/AppList';
 import AppDetail from './pages/AppDetail';
+import SearchResults from './pages/SearchResults';
 
 function App() {
   const [queueLength, setQueueLength] = useState<number | null>(null);
@@ -54,13 +55,24 @@ function App() {
   return (
     <>
       <Navbar color="dark" dark expand="md" container>
-        <NavbarBrand tag={Link} to="/">
-          Steam Web Parser
+        <NavbarBrand as={Link} to="/" className="d-flex gap-3 align-items-center">
+          <img
+            src="https://gamersbase.store/src/images/themes/assets/images/site-logo.svg"
+            alt="GamersBase Logo"
+            height="40"
+            className="me-2"
+          />
+          <span>Steam Web Parser</span>
         </NavbarBrand>
         <Nav className="me-auto" navbar>
           <NavItem>
             <Link className="nav-link" to="/">
               Apps
+            </Link>
+          </NavItem>
+          <NavItem>
+            <Link className="nav-link" to="/search-results">
+              Search Requests
             </Link>
           </NavItem>
         </Nav>
@@ -93,6 +105,7 @@ function App() {
         <Routes>
           <Route path="/" element={<AppList />} />
           <Route path="/app/:id" element={<AppDetail />} />
+          <Route path="/search-results" element={<SearchResults />} />
         </Routes>
       </Container>
     </>

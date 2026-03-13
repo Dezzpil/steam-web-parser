@@ -3,19 +3,12 @@ import { BaseCrawler } from '../crawler/base';
 import { SearchGrabber } from '../workers/searchGrabber';
 import { TaskType } from '../tools/task';
 import { Browser } from 'puppeteer';
-import { createAppsUrls, findRelatedAppsForApps } from '../tools/db';
+import { createAppsUrls, findAppByTitle, findRelatedAppsForApps } from '../tools/db';
 
 export type SearchSimilarCommonType = {
   id: number;
   title: string;
   genre: string[];
-};
-
-export type SearchSimilarResponseItemType = {
-  id: number;
-  title: string;
-  genre: string[];
-  similar: SearchSimilarCommonType[];
 };
 
 async function processGameTitles(titles: string[]) {
@@ -70,6 +63,12 @@ export async function processAndNotify(browser: Browser, titles: string[], callb
   const titleToTasks: Record<string, TaskType[]> = {};
   for (const title of processedTitles) {
     try {
+      const existingApp = await findAppByTitle(title);
+      if (existingApp) {
+        titleToTasks[title] = [existingApp];
+        console.log(`found title "${title}" in DB, skipping search`);
+        continue;
+      }
       titleToTasks[title] = await searchGrabber.searchApps(title);
     } catch (err) {
       console.error(`error searching for title "${title}":`, (err as Error).message);

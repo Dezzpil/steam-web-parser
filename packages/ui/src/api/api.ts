@@ -1,4 +1,11 @@
-import { App, AppWithRelations, AppsResponse, QueueLengthResponse, StatsResponse } from './types';
+import {
+  App,
+  AppWithRelations,
+  AppsResponse,
+  QueueLengthResponse,
+  StatsResponse,
+  SearchResultsResponse,
+} from './types';
 
 const API_URL = '/api';
 
@@ -42,6 +49,14 @@ export async function fetchStats(): Promise<StatsResponse> {
   const response = await fetch(`${API_URL}/stats`);
   if (!response.ok) {
     throw new Error('Failed to fetch statistics');
+  }
+  return await response.json();
+}
+
+export async function fetchSearchResults(limit = 20, offset = 0): Promise<SearchResultsResponse> {
+  const response = await fetch(`${API_URL}/search-results?limit=${limit}&offset=${offset}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch search results');
   }
   return await response.json();
 }
