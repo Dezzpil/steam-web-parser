@@ -55,12 +55,13 @@ async function fetchAndCallback(callbackUrl: string, titleToTasks: Record<string
   for (const entry of Object.entries(titleToTasks)) {
     const [title, tasks] = entry;
     results[title] = await findRelatedAppsForApps(tasks.map((t) => t.appId));
-    try {
-      await axios.post(callbackUrl, { results });
-      console.log(`Callback sent to ${callbackUrl}`);
-    } catch (err) {
-      console.error(`Failed to call callback URL ${callbackUrl}:`, (err as Error).message);
-    }
+  }
+
+  try {
+    await axios.post(callbackUrl, { results });
+    console.log(`Callback sent to ${callbackUrl}`);
+  } catch (err) {
+    console.error(`Failed to call callback URL ${callbackUrl}:`, (err as Error).message);
   }
   unregisterCallback(callbackUrl);
 }
@@ -88,6 +89,7 @@ export async function processAndNotify(browser: Browser, titles: string[], callb
         console.log(`found title "${title}" in DB, skipping search`);
         continue;
       }
+      console.log(`searching for title "${title}"`);
       titleToTasks[title] = await searchGrabber.searchApps(title);
     } catch (err) {
       console.error(`error searching for title "${title}":`, (err as Error).message);

@@ -43,6 +43,7 @@ export class SearchGrabber extends EventEmitter {
     const titleMatch = title.toLowerCase().startsWith(term.toLowerCase().slice(0, 2));
     if (!titleMatch) return tasks;
 
+    console.log(`found: ${title} (${appIdMatch[1]})`);
     tasks.push({
       href,
       appId: +appIdMatch[1],
