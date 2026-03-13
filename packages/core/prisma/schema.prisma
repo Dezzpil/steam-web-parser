@@ -55,6 +55,7 @@ model App {
   lastPrice  Int @default(0)
 
   @@index([updatedAt])
+  @@index([title])
 }
 
 model AppToApp {

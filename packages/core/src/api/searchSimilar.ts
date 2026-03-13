@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { LRUCache } from 'lru-cache';
 import { BaseCrawler } from '../crawler/base';
 import { SearchGrabber } from '../workers/searchGrabber';
 import { TaskType } from '../tools/task';
@@ -32,6 +33,23 @@ async function processGameTitles(titles: string[]) {
   return Array.from(processedTitles);
 }
 
+const callbackCache = new LRUCache<string, boolean>({
+  max: 1000,
+  ttl: 1000 * 60 * 60, // 1 hour
+});
+
+export function isCallbackPending(callbackUrl: string): boolean {
+  return callbackCache.has(callbackUrl);
+}
+
+export function registerCallback(callbackUrl: string) {
+  callbackCache.set(callbackUrl, true);
+}
+
+export function unregisterCallback(callbackUrl: string) {
+  callbackCache.delete(callbackUrl);
+}
+
 async function fetchAndCallback(callbackUrl: string, titleToTasks: Record<string, TaskType[]>) {
   const results: Record<string, SearchSimilarCommonType[]> = {};
   for (const entry of Object.entries(titleToTasks)) {
@@ -44,6 +62,7 @@ async function fetchAndCallback(callbackUrl: string, titleToTasks: Record<string
       console.error(`Failed to call callback URL ${callbackUrl}:`, (err as Error).message);
     }
   }
+  unregisterCallback(callbackUrl);
 }
 
 export async function processAndNotify(browser: Browser, titles: string[], callbackUrl: string) {

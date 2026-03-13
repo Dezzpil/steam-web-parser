@@ -14,7 +14,7 @@ import {
 } from '../tools/db';
 import dotenv from 'dotenv';
 import { createBrowser } from '../tools/browser';
-import { processAndNotify } from './searchSimilar';
+import { processAndNotify, isCallbackPending, registerCallback } from './searchSimilar';
 
 export async function createWebServer(port: number, q?: any): Promise<Express.Application> {
   const app = express();
@@ -379,6 +379,12 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
     if (!games || !Array.isArray(games) || !callbackUrl) {
       return res.status(400).json({ error: 'Invalid input' });
     }
+
+    if (isCallbackPending(callbackUrl)) {
+      return res.status(409).json({ error: 'Callback URL is already being processed' });
+    }
+
+    registerCallback(callbackUrl);
 
     // Start background processing
     processAndNotify(browser, games, callbackUrl).catch((err: any) => {
