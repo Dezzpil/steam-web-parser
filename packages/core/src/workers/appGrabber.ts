@@ -3,7 +3,6 @@ import { Browser, Page } from 'puppeteer';
 import { getNewBrowserPage } from '../tools/browser';
 import { TaskType } from '../tools/task';
 import { load } from 'cheerio';
-import TagElement = cheerio.TagElement;
 
 export type AppItem = {
   title: string;
@@ -65,8 +64,12 @@ export class AppGrabber extends EventEmitter {
   }
 
   async grabAndParseAppPage(url: string): Promise<AppItem> {
+    const parsed = new URL(url);
+    if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Invalid URL protocol');
+    if (!parsed.hostname.endsWith('steampowered.com')) throw new Error('Invalid domain');
+
     this._page = this._page || (await getNewBrowserPage(this._browser));
-    await this._page.goto(url, { waitUntil: 'domcontentloaded' });
+    await this._page.goto(parsed.toString(), { waitUntil: 'domcontentloaded' });
     try {
       await this._page.waitForSelector('#appHubAppName', { timeout: 5000 });
     } catch (e) {
@@ -108,7 +111,7 @@ export class AppGrabber extends EventEmitter {
     const genre = $('#genresAndManufacturer')
       .find('a')
       .filter((i, el) => {
-        return (el as TagElement).attribs.href.includes('genre');
+        return el.attribs.href.includes('genre');
       })
       .map((i, el) => $(el).text().trim())
       .get();
@@ -144,8 +147,12 @@ export class AppGrabber extends EventEmitter {
   }
 
   async grabAndParseMorePage(url: string) {
+    const parsed = new URL(url);
+    if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Invalid URL protocol');
+    if (!parsed.hostname.endsWith('steampowered.com')) throw new Error('Invalid domain');
+
     this._page = this._page || (await getNewBrowserPage(this._browser));
-    await this._page.goto(url, { waitUntil: 'domcontentloaded' });
+    await this._page.goto(parsed.toString(), { waitUntil: 'domcontentloaded' });
 
     for (const selector of MoreLikeThisSectionsSelectors) {
       try {
@@ -164,10 +171,11 @@ export class AppGrabber extends EventEmitter {
       $(`${selector}`)
         .find('div.similar_grid_item > a')
         .each((i, el) => {
-          const href = (el as TagElement).attribs.href;
+          const href = el.attribs.href;
           const appId = href.match(/app\/(\d+)\//)?.[1];
           const title = $(el).find('div.similar_grid_item_name').text().trim();
-          if (appId) urls.push({ href, appId: +appId, title: title || undefined });
+          if (appId)
+            urls.push({ href, appId: +appId, title: title || undefined, forMainLoop: true });
         });
     }
 

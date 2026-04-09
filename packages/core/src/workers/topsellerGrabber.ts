@@ -3,14 +3,16 @@ import { Browser, Page } from 'puppeteer';
 import { getNewBrowserPage } from '../tools/browser';
 import { TaskType } from '../tools/task';
 import { load } from 'cheerio';
-import TagElement = cheerio.TagElement;
 import { setInterval } from 'node:timers';
 
 export class TopSellerGrabber extends EventEmitter {
   private _parsed: Set<number>;
   private _pageHeight = 0;
 
-  constructor(private _browser: Browser, parsed?: Set<number>) {
+  constructor(
+    private _browser: Browser,
+    parsed?: Set<number>,
+  ) {
     super();
     this._parsed = parsed || new Set<number>();
   }
@@ -34,10 +36,10 @@ export class TopSellerGrabber extends EventEmitter {
     $('#search_resultsRows')
       .find('a')
       .each((i, el) => {
-        const href = (el as TagElement).attribs.href;
+        const href = el.attribs.href;
         const appId = href.match(/app\/(\d+)\//)?.[1];
         if (appId && !this._parsed.has(+appId)) {
-          urls.push({ href, appId: +appId });
+          urls.push({ href, appId: +appId, forMainLoop: true });
           this._parsed.add(+appId);
         }
       });
