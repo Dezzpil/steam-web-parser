@@ -37,7 +37,7 @@ async function getCurrentPlayersOnline(appId: number): Promise<number> {
   return 0;
 }
 
-async function getPrices(appIds: number[]): Promise<Record<number, PriceInfo>> {
+async function getPrices(appIds: number[], retries = 5): Promise<Record<number, PriceInfo>> {
   const result: Record<number, PriceInfo> = {};
   try {
     const response = await axios.get(`https://store.steampowered.com/api/appdetails/`, {
@@ -67,9 +67,13 @@ async function getPrices(appIds: number[]): Promise<Record<number, PriceInfo>> {
     console.log('error', (e as any).message);
     const err = e as AxiosError;
     if (err.response && err.response.status === 429) {
-      console.log('429 error, sleeping');
-      await sleep(1000 * 60);
-      return await getPrices(appIds);
+      if (retries > 0) {
+        console.log(`429 error, sleeping and retrying. Attempts left: ${retries}`);
+        await sleep(1000 * 60);
+        return await getPrices(appIds, retries - 1);
+      } else {
+        console.log('429 error, retries limit reached, aborting');
+      }
     }
   }
   return result;
