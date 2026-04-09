@@ -15,12 +15,32 @@ export async function createBrowser() {
   });
 
   // Get sessionId from cookies
-  const cookies = await page.cookies();
-  const sessionIdCookie = cookies.find((cookie) => cookie.name === 'sessionid');
-  const sessionId = sessionIdCookie ? sessionIdCookie.value : '';
-  console.log(`sessionId: ${sessionId}`);
+  const targetOrigin = 'https://store.steampowered.com';
+  const cookies = await page.cookies(targetOrigin);
+
+  // Validate that the cookie comes from the expected Steam domain to reduce fixation risk
+  const rawSessionCookie = cookies.find((cookie) => cookie.name === 'sessionid');
+  const sessionIdCookie = cookies.find((cookie) => {
+    if (cookie.name !== 'sessionid') return false;
+    const domain = cookie.domain || '';
+    const isValidDomain =
+      domain === 'store.steampowered.com' ||
+      domain === '.steampowered.com' ||
+      domain.endsWith('.steampowered.com');
+
+    return isValidDomain && cookie.secure;
+  });
+  const sessionId = sessionIdCookie?.value ?? '';
+  if (!sessionId && rawSessionCookie) {
+    console.warn(
+      `Found sessionid cookie with unexpected attributes (domain="${rawSessionCookie.domain}", secure=${rawSessionCookie.secure}). Skipping language setting.`,
+    );
+  }
   if (sessionId) {
-    const formData = `language=russian&sessionid=${sessionId}`;
+    const params = new URLSearchParams();
+    params.set('language', 'russian');
+    params.set('sessionid', sessionId);
+    const formData = params.toString();
     const result = await page.evaluate(async (formData) => {
       try {
         const response = await fetch('/account/setlanguage/', {
