@@ -5,7 +5,10 @@ import { App } from '@prisma/client';
 import { sleep } from './tools/time';
 
 dotenv.config();
+
 const SteamApiKey = process.env.STEAM_API_KEY;
+if (!SteamApiKey) throw new Error('STEAM_API_KEY is required');
+
 type PriceInfo = {
   finalFormatted: string;
   final: number;
