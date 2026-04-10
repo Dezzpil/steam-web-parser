@@ -11,6 +11,31 @@ services:
       - "5436:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./dumps:/var/dumps
+    networks:
+      - steam-parser-network
 
+  core-api:
+    build:
+      context: .
+      dockerfile: packages/core/Dockerfile
+    container_name: steam-parser-core-api
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/steam_parser?schema=public
+      PORT: "3000"
+      # Optional Prisma debug
+      # DEBUG: prisma:query
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - steam-parser-network
+
+networks:
+  steam-parser-network:
+    name: steam-parser-network
+    driver: bridge
 volumes:
   postgres_data:

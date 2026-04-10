@@ -1,7 +1,7 @@
 import { launch, Browser, Page } from 'puppeteer';
 
 export async function createBrowser() {
-  const args = process.env.DOCKER_ENV ? ['--no-sandbox', '--disable-setuid-sandbox'] : [];
+  const args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
   const browser = await launch({
     args,
     headless: true,

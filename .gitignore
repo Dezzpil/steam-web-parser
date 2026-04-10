@@ -35,3 +35,6 @@ Thumbs.db
 *dump.sql
 
 generated
+
+dumps/*
+!dumps/.gitkeep

@@ -72,7 +72,7 @@ cd packages/core
 pnpm run crawl
 ```
 
-Или можго запустить сбо данных из каталога Top Sellers
+Или можно запустить сбор данных из каталога Top Sellers
 ```bash
 cd packages/core
 pnpm run crawl:top

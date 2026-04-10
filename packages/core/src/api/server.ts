@@ -399,7 +399,8 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
 
   // starting server
   return new Promise((resolve) => {
-    app.listen(port, '127.0.0.1', () => {
+    // Listen on all interfaces to work inside Docker
+    app.listen(port, '0.0.0.0', () => {
       console.log(`API running on port ${port}`);
       resolve(app);
     });

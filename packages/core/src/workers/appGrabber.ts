@@ -1,6 +1,5 @@
 import EventEmitter from 'node:events';
 import { Browser, Page } from 'puppeteer';
-import { getNewBrowserPage } from '../tools/browser';
 import { TaskType } from '../tools/task';
 import { load } from 'cheerio';
 
@@ -28,18 +27,16 @@ export class AppGrabber extends EventEmitter {
     super();
   }
 
-  private _page: Page | undefined;
-
   async overcomeAgeWidget(page: Page) {
     try {
-      await page.waitForSelector('#view_product_page_btn', { timeout: 2000 });
+      await page.waitForSelector('#view_product_page_btn', { timeout: 3000 });
       await page.evaluate(() => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
-        document.querySelector('#ageYear').value = 1994;
+        document.querySelector('#ageYear').value = 1993;
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
-        document.querySelector('#ageDay').value = 11;
+        document.querySelector('#ageDay').value = 25;
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
         document.querySelector('#view_product_page_btn').click();
@@ -63,25 +60,45 @@ export class AppGrabber extends EventEmitter {
     // game_area_soundtrack_bubble
   }
 
-  async grabAndParseAppPage(url: string): Promise<AppItem> {
+  async grabAndParseAppPage(url: string, page: Page): Promise<AppItem> {
     const parsed = new URL(url);
     if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Invalid URL protocol');
     if (!parsed.hostname.endsWith('steampowered.com')) throw new Error('Invalid domain');
 
-    this._page = this._page || (await getNewBrowserPage(this._browser));
-    await this._page.goto(parsed.toString(), { waitUntil: 'domcontentloaded' });
+    const resp = await page.goto(parsed.toString(), { waitUntil: 'domcontentloaded' });
+    if (resp && resp.status() === 429) {
+      const e = new Error('HTTP_429: Too Many Requests');
+      // mark specially for throttling
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      e.code = 'HTTP_429';
+      throw e;
+    }
     try {
-      await this._page.waitForSelector('#appHubAppName', { timeout: 5000 });
+      await page.waitForSelector('#appHubAppName', { timeout: 5500 });
     } catch (e) {
-      await this.overcomeAgeWidget(this._page);
+      // If selector missing due to age gate try to overcome it, otherwise propagate timeout
+      try {
+        await this.overcomeAgeWidget(page);
+      } catch (err) {
+        const ex = err as Error;
+        if (ex.name === 'TimeoutError') {
+          const navErr = new Error('NAVIGATION_TIMEOUT');
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          navErr.code = 'NAVIGATION_TIMEOUT';
+          throw navErr;
+        }
+        throw err;
+      }
     }
 
-    const isDownloadableContent = await this.checkIsDownloadableContent(this._page);
+    const isDownloadableContent = await this.checkIsDownloadableContent(page);
     if (!isDownloadableContent) {
-      await this._page.waitForSelector(MoreLikeThisSelector, { timeout: 10000 });
+      await page.waitForSelector(MoreLikeThisSelector, { timeout: 10500 });
     }
 
-    const html = await this._page.content();
+    const html = await page.content();
     const $ = load(html);
 
     const reviewsBlock = $('#userReviews');
@@ -146,24 +163,30 @@ export class AppGrabber extends EventEmitter {
     } as AppItem;
   }
 
-  async grabAndParseMorePage(url: string) {
+  async grabAndParseMorePage(url: string, page: Page) {
     const parsed = new URL(url);
     if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Invalid URL protocol');
     if (!parsed.hostname.endsWith('steampowered.com')) throw new Error('Invalid domain');
 
-    this._page = this._page || (await getNewBrowserPage(this._browser));
-    await this._page.goto(parsed.toString(), { waitUntil: 'domcontentloaded' });
+    const resp = await page.goto(parsed.toString(), { waitUntil: 'domcontentloaded' });
+    if (resp && resp.status() === 429) {
+      const e = new Error('HTTP_429: Too Many Requests');
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      e.code = 'HTTP_429';
+      throw e;
+    }
 
     for (const selector of MoreLikeThisSectionsSelectors) {
       try {
-        await this._page.waitForSelector(selector, { visible: true, timeout: 10000 });
+        await page.waitForSelector(selector, { visible: true, timeout: 10000 });
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         // skip
       }
     }
 
-    const html = await this._page.content();
+    const html = await page.content();
     const $ = load(html);
 
     const urls: Array<TaskType> = [];
@@ -182,9 +205,5 @@ export class AppGrabber extends EventEmitter {
     return urls;
   }
 
-  async close() {
-    if (this._page) {
-      await this._page.close();
-    }
-  }
+  async close() {}
 }
