@@ -38,3 +38,6 @@ generated
 
 dumps/*
 !dumps/.gitkeep
+
+datasets/*
+!datasets/.gitkeep

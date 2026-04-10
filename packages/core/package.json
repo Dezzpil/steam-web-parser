@@ -9,6 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "crawl": "node --import tsx src/crawl.ts",
     "crawl:top": "node --import tsx src/crawl_top.ts",
+    "crawl:csv": "node --import tsx src/crawl_from_csv.ts",
     "online_n_price": "node --import tsx src/online_n_price.ts",
     "api": "node --import tsx src/api/server.ts",
     "api:test": "node --import tsx tests/integration-test.ts",
