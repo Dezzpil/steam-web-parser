@@ -41,6 +41,15 @@ export class AppGrabber extends EventEmitter {
         // @ts-expect-error
         document.querySelector('#view_product_page_btn').click();
       });
+      // Дождаться завершения перехода после преодоления age gate,
+      // иначе дальнейшие операции могут обратиться к отцепленному фрейму
+      try {
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 12000 });
+      } catch (e) {
+        // В некоторых случаях навигации может не быть (редирект через JS),
+        // тогда убедимся что основной селектор страницы приложения появился
+        await page.waitForSelector('#appHubAppName', { timeout: 7000 });
+      }
     } catch (e) {
       throw e;
     }
@@ -80,6 +89,8 @@ export class AppGrabber extends EventEmitter {
       // If selector missing due to age gate try to overcome it, otherwise propagate timeout
       try {
         await this.overcomeAgeWidget(page);
+        // гарантируем, что после преодоления видим основной селектор
+        await page.waitForSelector('#appHubAppName', { timeout: 7000 });
       } catch (err) {
         const ex = err as Error;
         if (ex.name === 'TimeoutError') {

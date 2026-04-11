@@ -150,13 +150,33 @@ export class BaseCrawler {
   }
 
   async releasePage(page: Page): Promise<void> {
+    // Проверяем, не "битая" ли страница: закрыта/фрейм отцеплен
+    let healthy = true;
+    try {
+      if (page.isClosed()) healthy = false;
+      else if (!page.mainFrame() || page.mainFrame().isDetached()) healthy = false;
+    } catch (e) {
+      healthy = false;
+    }
+
+    let pageToReturn: Page = page;
+    if (!healthy) {
+      try {
+        if (!page.isClosed()) await page.close().catch(() => void 0);
+      } catch (e) {
+        // ignore
+      }
+      // создаём новую страницу взамен сломанной
+      pageToReturn = await getNewBrowserPage(this._browser);
+    }
+
     // If there is a waiter, give the page immediately
     const waiter = this._waiters.shift();
     if (waiter) {
-      waiter(page);
+      waiter(pageToReturn);
       return;
     }
-    this._availablePages.push(page);
+    this._availablePages.push(pageToReturn);
   }
 
   private _isThrottleWorthyError(err: Error): boolean {
@@ -168,6 +188,8 @@ export class BaseCrawler {
     if (err.name === 'TimeoutError') return true;
     if (/Too\s*Many\s*Requests/i.test(msg)) return true;
     if (/net::ERR_|Navigation\sfailed|blocked|temporarily\sdisabled/i.test(msg)) return true;
+    // Detached frame / execution context lost — часто означает перегруз либо гонку навигации
+    if (/detached\s*Frame|Execution\s*context\s*was\s*destroyed/i.test(msg)) return true;
 
     return false;
   }
