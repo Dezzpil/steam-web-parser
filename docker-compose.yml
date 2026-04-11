@@ -33,6 +33,19 @@ services:
     networks:
       - steam-parser-network
 
+  core-ui:
+    build:
+      context: .
+      dockerfile: packages/ui/Dockerfile
+    container_name: steam-parser-core-ui
+    depends_on:
+      - core-api
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - steam-parser-network
+
 networks:
   steam-parser-network:
     name: steam-parser-network
