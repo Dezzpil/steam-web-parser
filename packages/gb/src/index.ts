@@ -27,14 +27,9 @@ const QueueConcurrency = 3;
       }
 
       console.log(`${product.id}:${product.skuCode} prepare to grab ...`);
-      const similar = await productGrabber.grab(product);
-      console.log(
-        `${product.id}:${product.skuCode} found similar ${similar.length}: ${similar
-          .map((s) => s.name)
-          .join(', ')}`,
-      );
+      const similar = await productGrabber.grabSimilar(product);
 
-      if (similar.length) {
+      if (similar && similar.length) {
         console.log(`${product.id}:${product.skuCode} ${similar.length} similar`);
         await insertSimilarForProduct(product.id, similar);
 

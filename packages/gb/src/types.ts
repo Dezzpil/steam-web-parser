@@ -3,10 +3,14 @@ export type ProductGenreType = {
   name: string;
 };
 
+export type ProductGenresMapType = Map<string, ProductGenreType>; // by name
+
 export type ProductPlatformType = {
   id: number;
   name: string;
 };
+
+export type ProductPlatformsMapType = Map<string, ProductPlatformType>; // by name
 
 export type ProductType = {
   id: number;
@@ -22,4 +26,14 @@ export type ProductType = {
   priceStandart: number;
   priceActual: number;
   currency: string;
+};
+
+export type ProductProxyFromCSV = {
+  id: number;
+  skuId: number;
+  skuCode: string;
+  name: string;
+  type: string;
+  isPreorder: boolean;
+  isSale: boolean;
 };

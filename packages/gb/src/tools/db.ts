@@ -1,8 +1,15 @@
 import prisma from './prisma';
-import { ProductType } from '../types';
+import {
+  ProductGenresMapType,
+  ProductGenreType,
+  ProductPlatformsMapType,
+  ProductPlatformType,
+  ProductType,
+} from '../types';
 
 export async function insertProduct(item: ProductType) {
   if (!item.id) throw new Error('Product ID is missing');
+  console.log(`${item.id}:${item.name} inserting product`);
   return prisma.product.create({
     data: {
       id: item.id,
@@ -53,4 +60,36 @@ export async function isProductExists(id: number) {
     where: { id },
     select: { id: true },
   });
+}
+
+export async function fetchGenres(
+  asMap = false,
+): Promise<ProductGenresMapType | ProductGenreType[]> {
+  const list = await prisma.productGenre.findMany({
+    select: { id: true, name: true },
+  });
+  if (asMap) {
+    const map = new Map();
+    for (const item of list) {
+      map.set(item.name, item);
+    }
+    return map;
+  }
+  return list;
+}
+
+export async function fetchPlatforms(
+  asMap = false,
+): Promise<ProductPlatformsMapType | ProductPlatformType[]> {
+  const list = await prisma.productPlatform.findMany({
+    select: { id: true, name: true },
+  });
+  if (asMap) {
+    const map = new Map();
+    for (const item of list) {
+      map.set(item.name, item);
+    }
+    return map;
+  }
+  return list;
 }
