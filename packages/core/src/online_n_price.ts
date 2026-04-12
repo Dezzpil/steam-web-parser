@@ -17,12 +17,19 @@ type PriceInfo = {
   discount: number;
   currency: string;
 };
-let onlineMethodIsBroken = false;
+
+// Enable Axios debugging
+axios.interceptors.request.use((request) => {
+  console.log('Full URL:', `${request.baseURL || ''}${request.url}`);
+  console.log('Params:', request.params);
+  console.log('Method:', request.method);
+  return request;
+});
 
 async function getCurrentPlayersOnline(appId: number): Promise<number> {
+  appId = 730; // CS2
   const response = await axios.get(
-    'https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/',
-    // 'https://partner.steam-api.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/',
+    'https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1',
     {
       params: {
         key: SteamApiKey,
@@ -39,42 +46,45 @@ async function getCurrentPlayersOnline(appId: number): Promise<number> {
 
 async function getPrices(appIds: number[], retries = 5): Promise<Record<number, PriceInfo>> {
   const result: Record<number, PriceInfo> = {};
-  try {
-    const response = await axios.get(`https://store.steampowered.com/api/appdetails/`, {
-      params: {
-        appids: appIds.join(','),
-        cc: 'ru',
-        filters: 'price_overview',
-      },
-    });
-    if (response.data) {
-      for (const key in response.data) {
-        const po = response.data[key].data.price_overview;
-        if (!po) continue;
+  for (const appId of appIds) {
+    try {
+      const response = await axios.get(`https://store.steampowered.com/api/appdetails`, {
+        params: {
+          appids: appId,
+          cc: 'ru',
+          filters: 'price_overview',
+        },
+      });
+      if (response.data) {
+        for (const key in response.data) {
+          const po = response.data[key].data.price_overview;
+          if (!po) continue;
 
-        const appId = +key;
-        result[appId] = {
-          currency: po.currency,
-          discount: po.discount_percent,
-          initial: po.initial,
-          initialFormatted: po.initial_formatted,
-          final: po.final,
-          finalFormatted: po.final_formatted,
-        };
+          const appId = +key;
+          result[appId] = {
+            currency: po.currency,
+            discount: po.discount_percent,
+            initial: po.initial,
+            initialFormatted: po.initial_formatted,
+            final: po.final,
+            finalFormatted: po.final_formatted,
+          };
+        }
+      }
+    } catch (e) {
+      console.log('error', (e as any).message);
+      const err = e as AxiosError;
+      if (err.response && err.response.status === 429) {
+        if (retries > 0) {
+          console.log(`429 error, sleeping and retrying. Attempts left: ${retries}`);
+          await sleep(1000 * 60);
+          return await getPrices(appIds, retries - 1);
+        } else {
+          console.log('429 error, retries limit reached, aborting');
+        }
       }
     }
-  } catch (e) {
-    console.log('error', (e as any).message);
-    const err = e as AxiosError;
-    if (err.response && err.response.status === 429) {
-      if (retries > 0) {
-        console.log(`429 error, sleeping and retrying. Attempts left: ${retries}`);
-        await sleep(1000 * 60);
-        return await getPrices(appIds, retries - 1);
-      } else {
-        console.log('429 error, retries limit reached, aborting');
-      }
-    }
+    await sleep(200);
   }
   return result;
 }
@@ -100,7 +110,6 @@ if (require.main === module) {
 
       for (const app of apps) {
         appsIds.push(app.id);
-        if (onlineMethodIsBroken) continue;
         let online = 0;
         try {
           online = await getCurrentPlayersOnline(app.id);
@@ -114,7 +123,6 @@ if (require.main === module) {
           console.log(`${app.id} - online ${online} saved`);
         } catch (e) {
           console.log(`${app.id} - online fetch error: ${(e as any).message}`);
-          onlineMethodIsBroken = true;
           continue;
         }
 

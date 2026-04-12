@@ -161,6 +161,8 @@ export async function findRelatedAppsForApps(ids: number[]) {
       id: true,
       title: true,
       genre: true,
+      popularTags: true,
+      linkToLogoImg: true,
     },
   });
 }

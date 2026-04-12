@@ -50,5 +50,7 @@ networks:
   steam-parser-network:
     name: steam-parser-network
     driver: bridge
+    external: true
+
 volumes:
   postgres_data:

@@ -58,8 +58,11 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
             type: 'object',
             properties: {
               id: { type: 'integer' },
+              appId: { type: 'integer', description: 'Alias of id for convenience' },
               title: { type: 'string' },
               genre: { type: 'array', items: { type: 'string' } },
+              popularTags: { type: 'array', items: { type: 'string' } },
+              linkToLogoImg: { type: 'string' },
             },
           },
           SearchSimilarCallbackPayload: {
@@ -381,12 +384,16 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
     }
 
     if (isCallbackPending(callbackUrl)) {
+      console.log(`Callback URL ${callbackUrl} is already being processed`);
       return res.status(409).json({ error: 'Callback URL is already being processed' });
     }
 
     registerCallback(callbackUrl);
 
     // Start background processing
+    console.log(
+      `Starting background processing for callback URL:${callbackUrl} and games:${games.join(',')}`,
+    );
     processAndNotify(browser, games, callbackUrl).catch((err: any) => {
       console.error('Background processing error:', err);
     });

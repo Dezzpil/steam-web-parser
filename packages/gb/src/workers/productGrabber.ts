@@ -19,8 +19,8 @@ export class ProductGrabber {
     console.log(`${id}:${skuCode} going to ${url}`);
 
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 100000 });
-      await page.waitForSelector('div.product-card-info.product-card-tabs', { timeout: 10000 });
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 });
+      await page.waitForSelector('div.product-card-info.product-card-tabs', { timeout: 2000 });
       return page;
     } catch (e) {
       console.log(`${id}:${skuCode} error: ${(e as any).message}`);

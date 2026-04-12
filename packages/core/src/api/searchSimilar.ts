@@ -10,6 +10,9 @@ export type SearchSimilarCommonType = {
   id: number;
   title: string;
   genre: string[];
+  popularTags: string[];
+  linkToLogoImg: string;
+  appId: number; // duplicate of id for consumer convenience
 };
 
 async function processGameTitles(titles: string[]) {
@@ -54,7 +57,12 @@ async function fetchAndCallback(callbackUrl: string, titleToTasks: Record<string
   const results: Record<string, SearchSimilarCommonType[]> = {};
   for (const entry of Object.entries(titleToTasks)) {
     const [title, tasks] = entry;
-    results[title] = await findRelatedAppsForApps(tasks.map((t) => t.appId));
+    const raw = await findRelatedAppsForApps(tasks.map((t) => t.appId));
+    // add appId field mirroring id to satisfy API contract
+    results[title] = raw.map((item) => ({
+      ...item,
+      appId: item.id,
+    })) as SearchSimilarCommonType[];
   }
 
   try {
