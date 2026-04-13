@@ -20,7 +20,7 @@ export class ProductGrabber {
 
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 });
-      await page.waitForSelector('div.product-card-info.product-card-tabs', { timeout: 2000 });
+      await page.waitForSelector('div.product-card-info.product-card-tabs', { timeout: 5000 });
       return page;
     } catch (e) {
       console.log(`${id}:${skuCode} error: ${(e as any).message}`);
