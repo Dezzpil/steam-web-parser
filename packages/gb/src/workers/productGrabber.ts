@@ -15,7 +15,7 @@ export class ProductGrabber {
 
   async _openPage(id: number, skuCode: string) {
     const page = await getNewBrowserPage(this.browser);
-    const url = `https://gamersbase.store/game/${skuCode}`;
+    const url = `https://gamersbase.store/ru/game/${skuCode}`;
     console.log(`${id}:${skuCode} going to ${url}`);
 
     try {

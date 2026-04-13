@@ -67,7 +67,7 @@ export class CatalogGrabber {
   async grab(): Promise<ProductType[]> {
     if (!this._page) {
       this._page = await getNewBrowserPage(this.browser);
-      await this._page.goto('https://gamersbase.store/catalogs', {
+      await this._page.goto('https://gamersbase.store/ru/catalogs', {
         waitUntil: 'domcontentloaded',
         timeout: 20000,
       });
@@ -88,7 +88,7 @@ export class CatalogGrabber {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
-          const response = await fetch('/api/v1/catalogs', {
+          const response = await fetch('/api/catalogs', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
