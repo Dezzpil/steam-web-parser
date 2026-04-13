@@ -1,6 +1,6 @@
 import prisma from './prisma';
 import { AppItem } from '../workers/appGrabber';
-import { TaskType } from './task';
+import { TaskExtendedType, TaskType } from './task';
 import { AppUrl } from '../../generated/client';
 
 export async function findAppUrl(id: number, throwGrabbedError = true) {
@@ -167,6 +167,20 @@ export async function findRelatedAppsForApps(ids: number[]) {
   });
 }
 
+export async function findAppsBasic(ids: number[]) {
+  if (!ids.length) return [] as const;
+  return prisma.app.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      title: true,
+      genre: true,
+      popularTags: true,
+      linkToLogoImg: true,
+    },
+  });
+}
+
 export async function findRelatedApps(appId: number) {
   const relations = await prisma.appToApp.findMany({
     where: { leftId: appId },
@@ -196,7 +210,7 @@ export async function findRelatedApps(appId: number) {
   });
 }
 
-export async function findAppByTitle(title: string): Promise<TaskType | null> {
+export async function findAppByTitle(title: string): Promise<TaskExtendedType | null> {
   const app = await prisma.app.findFirst({
     where: {
       title: {
@@ -216,6 +230,9 @@ export async function findAppByTitle(title: string): Promise<TaskType | null> {
     href: app.AppUrl.path,
     forMainLoop: app.AppUrl.forMainLoop,
     title: app.title,
+    genre: app.genre,
+    popularTags: app.popularTags,
+    linkToLogoImg: app.linkToLogoImg,
   };
 }
 

@@ -5,3 +5,9 @@ export type TaskType = {
   fromAppId?: number;
   title?: string;
 };
+
+export type TaskExtendedType = TaskType & {
+  genre: string[];
+  popularTags: string[];
+  linkToLogoImg: string;
+};

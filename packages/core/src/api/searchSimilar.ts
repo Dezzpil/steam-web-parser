@@ -4,7 +4,7 @@ import { BaseCrawler } from '../crawler/base';
 import { SearchGrabber } from '../workers/searchGrabber';
 import { TaskType } from '../tools/task';
 import { Browser } from 'puppeteer';
-import { createAppsUrls, findAppByTitle, findRelatedAppsForApps } from '../tools/db';
+import { createAppsUrls, findAppByTitle, findRelatedAppsForApps, findAppsBasic } from '../tools/db';
 
 export type SearchSimilarCommonType = {
   id: number;
@@ -13,6 +13,11 @@ export type SearchSimilarCommonType = {
   popularTags: string[];
   linkToLogoImg: string;
   appId: number; // duplicate of id for consumer convenience
+};
+
+export type SearchSimilarPerTitle = {
+  app: SearchSimilarCommonType | null;
+  similar: SearchSimilarCommonType[];
 };
 
 async function processGameTitles(titles: string[]) {
@@ -54,15 +59,40 @@ export function unregisterCallback(callbackUrl: string) {
 }
 
 async function fetchAndCallback(callbackUrl: string, titleToTasks: Record<string, TaskType[]>) {
-  const results: Record<string, SearchSimilarCommonType[]> = {};
+  const results: Record<string, SearchSimilarPerTitle> = {};
+
+  // собрать все appId, чтобы одной выборкой получить данные по основным играм
+  const allIds = Array.from(
+    new Set(
+      Object.values(titleToTasks)
+        .flat()
+        .map((t) => t.appId),
+    ),
+  );
+
+  const mainApps = await findAppsBasic(allIds);
+  const mainAppsById = new Map<number, Omit<SearchSimilarCommonType, 'appId'> & { appId?: number }>(
+    mainApps.map((a) => [a.id, a]),
+  );
+
   for (const entry of Object.entries(titleToTasks)) {
     const [title, tasks] = entry;
-    const raw = await findRelatedAppsForApps(tasks.map((t) => t.appId));
-    // add appId field mirroring id to satisfy API contract
-    results[title] = raw.map((item) => ({
+    const rawSimilar = await findRelatedAppsForApps(tasks.map((t) => t.appId));
+
+    const similar = rawSimilar.map((item) => ({
       ...item,
       appId: item.id,
     })) as SearchSimilarCommonType[];
+
+    const primary = tasks[0]?.appId ? mainAppsById.get(tasks[0].appId) || null : null;
+    const app = primary
+      ? ({
+          ...(primary as any),
+          appId: primary.id,
+        } as SearchSimilarCommonType)
+      : null;
+
+    results[title] = { app, similar };
   }
 
   try {

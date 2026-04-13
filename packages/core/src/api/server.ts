@@ -65,19 +65,26 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
               linkToLogoImg: { type: 'string' },
             },
           },
+          SearchSimilarPerTitle: {
+            type: 'object',
+            description:
+              'Result for a single requested game title: main app info and a list of similar apps',
+            properties: {
+              app: { $ref: '#/components/schemas/SearchSimilarResult', nullable: true },
+              similar: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/SearchSimilarResult' },
+              },
+            },
+          },
           SearchSimilarCallbackPayload: {
             type: 'object',
             properties: {
               results: {
                 type: 'object',
-                additionalProperties: {
-                  type: 'array',
-                  items: {
-                    $ref: '#/components/schemas/SearchSimilarResult',
-                  },
-                },
+                additionalProperties: { $ref: '#/components/schemas/SearchSimilarPerTitle' },
                 description:
-                  'Record where key is the game title and value is a list of similar games',
+                  'Record where key is the requested game title and value contains main app (app) info and similar apps list (similar)',
               },
             },
           },
@@ -342,8 +349,12 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
    * @openapi
    * /api/search-similar:
    *   post:
-   *     summary: Start a search for similar apps
-   *     description: Searches for similar apps on Steam. Results will be sent asynchronously to the provided callback URL.
+   *     summary: Запустить поиск похожих игр
+   *     description: |
+   *       Выполняет поиск игр в Steam по переданным названиям и находит похожие.
+   *       В callback придёт объект с ключами — искомыми названиями, значениями будут объекты с двумя полями:
+   *       `app` — данные найденной игры (popularTags, genre, appId, linkToLogoImg),
+   *       и `similar` — массив похожих игр.
    *     requestBody:
    *       required: true
    *       content:
