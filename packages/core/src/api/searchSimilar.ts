@@ -18,28 +18,8 @@ export type SearchSimilarCommonType = {
 export type SearchSimilarPerTitle = {
   app: SearchSimilarCommonType | null;
   similar: SearchSimilarCommonType[];
+  foundByAnotherTerm?: string;
 };
-
-async function processGameTitles(titles: string[]) {
-  const processedTitles = new Set<string>();
-
-  for (const title of titles) {
-    const trimmedTitle = title.trim().toLowerCase();
-    if (!trimmedTitle) continue;
-
-    processedTitles.add(trimmedTitle);
-
-    const hyphenIndex = trimmedTitle.indexOf('-');
-    if (hyphenIndex !== -1) {
-      const shortTitle = trimmedTitle.substring(0, hyphenIndex).trim();
-      if (shortTitle) {
-        processedTitles.add(shortTitle);
-      }
-    }
-  }
-
-  return Array.from(processedTitles);
-}
 
 const callbackCache = new LRUCache<string, boolean>({
   max: 1000,
@@ -58,7 +38,11 @@ export function unregisterCallback(callbackUrl: string) {
   callbackCache.delete(callbackUrl);
 }
 
-async function fetchAndCallback(callbackUrl: string, titleToTasks: Record<string, TaskType[]>) {
+async function fetchAndCallback(
+  callbackUrl: string,
+  titleToTasks: Record<string, TaskType[]>,
+  foundByAnotherTerm: Record<string, string> = {},
+) {
   const results: Record<string, SearchSimilarPerTitle> = {};
 
   // собрать все appId, чтобы одной выборкой получить данные по основным играм
@@ -92,7 +76,11 @@ async function fetchAndCallback(callbackUrl: string, titleToTasks: Record<string
         } as SearchSimilarCommonType)
       : null;
 
-    results[title] = { app, similar };
+    results[title] = {
+      app,
+      similar,
+      foundByAnotherTerm: foundByAnotherTerm[title],
+    };
   }
 
   try {
@@ -109,34 +97,98 @@ export async function processAndNotify(browser: Browser, titles: string[], callb
   await crawler.init(2, false);
   console.log(`crawler initialized with ${crawler.queue.length()} tasks`);
 
-  const processedTitles = await processGameTitles(titles);
-  if (processedTitles.length === 0) {
-    console.log('no valid titles found');
-    await fetchAndCallback(callbackUrl, {});
-    return;
-  }
-  console.log(`found ${processedTitles.length} valid titles`);
-
   const searchGrabber = new SearchGrabber(crawler.browser);
   const titleToTasks: Record<string, TaskType[]> = {};
-  for (const title of processedTitles) {
+  const foundByAnotherTerm: Record<string, string> = {};
+
+  for (const originalTitle of titles) {
+    const trimmedTitle = originalTitle.trim();
+    if (!trimmedTitle) continue;
+
+    let foundTasks: TaskType[] = [];
+    let currentFoundByTerm: string | undefined;
+
+    // 1. Сначала пробуем по данному названию
     try {
-      const existingApp = await findAppByTitle(title);
+      const existingApp = await findAppByTitle(trimmedTitle);
       if (existingApp) {
-        titleToTasks[title] = [existingApp];
-        console.log(`found title "${title}" in DB, skipping search`);
-        continue;
+        foundTasks = [existingApp];
+        console.log(`found title "${trimmedTitle}" in DB`);
+      } else {
+        console.log(`searching for title "${trimmedTitle}"`);
+        foundTasks = await searchGrabber.searchApps(trimmedTitle);
       }
-      console.log(`searching for title "${title}"`);
-      titleToTasks[title] = await searchGrabber.searchApps(title);
     } catch (err) {
-      console.error(`error searching for title "${title}":`, (err as Error).message);
+      console.error(`error searching for title "${trimmedTitle}":`, (err as Error).message);
+    }
+
+    // 2. Эвристики
+    if (foundTasks.length === 0) {
+      // 2a. Разбиение по +
+      if (trimmedTitle.includes('+')) {
+        const parts = trimmedTitle
+          .split('+')
+          .map((s) => s.trim())
+          .filter((s) => s);
+        console.log(`trying heuristic (+) for "${trimmedTitle}": ${parts.join(', ')}`);
+        for (const part of parts) {
+          try {
+            const partExistingApp = await findAppByTitle(part);
+            if (partExistingApp) {
+              foundTasks.push(partExistingApp);
+            } else {
+              const partSearchTasks = await searchGrabber.searchApps(part);
+              foundTasks.push(...partSearchTasks);
+            }
+          } catch (err) {
+            console.error(`error heuristic (+) for part "${part}":`, (err as Error).message);
+          }
+        }
+        if (foundTasks.length > 0) {
+          currentFoundByTerm = parts.join(' + ');
+        }
+      }
+
+      // 2b. Отбрасывание части после -
+      if (foundTasks.length === 0) {
+        const hyphenIndex = trimmedTitle.indexOf('-');
+        if (hyphenIndex !== -1) {
+          const shortTitle = trimmedTitle.substring(0, hyphenIndex).trim();
+          if (shortTitle) {
+            console.log(`trying heuristic (-) for "${trimmedTitle}": ${shortTitle}`);
+            try {
+              const shortExistingApp = await findAppByTitle(shortTitle);
+              if (shortExistingApp) {
+                foundTasks = [shortExistingApp];
+              } else {
+                foundTasks = await searchGrabber.searchApps(shortTitle);
+              }
+              if (foundTasks.length > 0) {
+                currentFoundByTerm = shortTitle;
+              }
+            } catch (err) {
+              console.error(
+                `error heuristic (-) for short title "${shortTitle}":`,
+                (err as Error).message,
+              );
+            }
+          }
+        }
+      }
+    }
+
+    if (foundTasks.length > 0) {
+      titleToTasks[originalTitle] = foundTasks;
+      if (currentFoundByTerm && currentFoundByTerm.toLowerCase() !== trimmedTitle.toLowerCase()) {
+        foundByAnotherTerm[originalTitle] = currentFoundByTerm;
+      }
     }
   }
+
   await searchGrabber.close();
 
   if (Object.keys(titleToTasks).length === 0) {
-    await fetchAndCallback(callbackUrl, titleToTasks);
+    await fetchAndCallback(callbackUrl, titleToTasks, foundByAnotherTerm);
     return;
   }
 
@@ -151,12 +203,12 @@ export async function processAndNotify(browser: Browser, titles: string[], callb
   console.log(`added new ${urls.length} urls from ${tasksCnt} tasks`);
 
   if (urls.length === 0) {
-    await fetchAndCallback(callbackUrl, titleToTasks);
+    await fetchAndCallback(callbackUrl, titleToTasks, foundByAnotherTerm);
   } else {
     crawler.queue.drain(async () => {
       if (crawler.processed === 0) return;
       console.log('all tasks processed');
-      await fetchAndCallback(callbackUrl, titleToTasks);
+      await fetchAndCallback(callbackUrl, titleToTasks, foundByAnotherTerm);
     });
     for (const task of urls) {
       await crawler.queue.push(task);
