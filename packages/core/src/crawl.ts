@@ -1,13 +1,10 @@
 import { createBrowser } from './tools/browser';
 import { findNotGrabbedAppsUrls } from './tools/db';
-import { writeFileSync } from 'node:fs';
 import { BaseCrawler } from './crawler/base';
 
 const QueueConcurrency = 3;
 
 if (require.main === module) {
-  const started = process.hrtime();
-
   (async () => {
     const browser = await createBrowser();
     process.on('exit', (code) => {
@@ -16,11 +13,6 @@ if (require.main === module) {
 
     const crawler = new BaseCrawler(browser);
     await crawler.init(QueueConcurrency);
-
-    process.on('exit', () => {
-      const ended = process.hrtime(started);
-      writeFileSync('report.txt', JSON.stringify({ processed: crawler.processed, ended }));
-    });
 
     const findUrlsToGrab = async () => {
       const orphanedAppsUrls = await findNotGrabbedAppsUrls();

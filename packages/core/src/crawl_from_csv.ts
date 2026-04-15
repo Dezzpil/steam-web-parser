@@ -5,7 +5,6 @@ import { createBrowser } from './tools/browser';
 import { BaseCrawler } from './crawler/base';
 import { createAppsUrls } from './tools/db';
 import { TaskType } from './tools/task';
-import { writeFileSync } from 'node:fs';
 
 const QueueConcurrency = 3;
 
@@ -77,8 +76,6 @@ function toSteamAppUrl(appId: number): string {
 }
 
 if (require.main === module) {
-  const started = process.hrtime();
-
   (async () => {
     const [, , csvPathArg] = process.argv;
     if (!csvPathArg) {
@@ -96,11 +93,6 @@ if (require.main === module) {
 
     const crawler = new BaseCrawler(browser);
     await crawler.init(QueueConcurrency, true, true);
-
-    process.on('exit', () => {
-      const ended = process.hrtime(started);
-      writeFileSync('report.txt', JSON.stringify({ processed: crawler.processed, ended }));
-    });
 
     // Потоковая обработка CSV без загрузки всех appId в память
     const BATCH_SIZE = 200; // сколько appId собирать перед вставкой в БД/очередь

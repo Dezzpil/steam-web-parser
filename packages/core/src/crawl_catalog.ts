@@ -2,7 +2,6 @@ import { createBrowser } from './tools/browser';
 import { BaseCrawler } from './crawler/base';
 import { createAppsUrls } from './tools/db';
 import { TaskType } from './tools/task';
-import { writeFileSync } from 'node:fs';
 import { Browser, Page } from 'puppeteer';
 import { getNewBrowserPage } from './tools/browser';
 import { load } from 'cheerio';
@@ -95,18 +94,6 @@ if (require.main === module) {
 
     const crawler = new BaseCrawler(browser);
     await crawler.init(QueueConcurrency);
-
-    process.on('exit', () => {
-      const ended = process.hrtime(started);
-      writeFileSync('report.txt', JSON.stringify({ processed: crawler.processed, ended }));
-    });
-
-    // const orphanedAppsUrlsSet = new Set<number>();
-    // const orphanedAppsUrls = await findNotGrabbedAppsUrls();
-    // console.log(`orphaned url apps: ${orphanedAppsUrls.length}`);
-    // for (const url of orphanedAppsUrls) {
-    //   orphanedAppsUrlsSet.add(url.id);
-    // }
 
     const catalogGrabber = new CatalogGrabber(browser);
 
