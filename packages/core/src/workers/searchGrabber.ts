@@ -14,12 +14,11 @@ export class SearchGrabber extends EventEmitter {
   async searchApps(term: string): Promise<TaskType[]> {
     const tasks: TaskType[] = [];
     this._page = this._page || (await getNewBrowserPage(this._browser));
-    const url = `https://store.steampowered.com/search/?term=${encodeURIComponent(term)}`;
+    const url = `https://store.steampowered.com/search/?term=${encodeURIComponent(term)}&ndl=1`; //не уточнять язык!
     await this._page.goto(url, { waitUntil: 'domcontentloaded' });
 
     try {
-      await this._page.waitForSelector('#search_result_container');
-      await this._page.waitForSelector('#search_resultsRows');
+      await this._page.waitForSelector('#search_results', { timeout: 10000 });
     } catch (e: any) {
       return tasks;
     }
@@ -30,8 +29,24 @@ export class SearchGrabber extends EventEmitter {
     // TODO тут есть проблемы из-за которых может придти много лишнего:
     //  Baldur's Gate 3, Baldur's Gate 3 - Digital Deluxe Edition DLC, Baldur's Gate 3 Toolkit Data и т.д
     //  Поэтому берем только первый
-    const a = $('#search_resultsRows').find('a').first();
+    let count = 0;
 
+    // пытаемся разобрать строчку "Результатов по вашему запросу: 63."
+    const countDescription = $('#search_results > div.search_results_count')
+      .text()
+      .trim()
+      .split(':');
+    if (countDescription && countDescription.length > 1) {
+      const parts = countDescription[1].split('.');
+      if (parts.length > 0 && isFinite(+parts[0].trim())) count = +parts[0].trim();
+    }
+
+    if (count === 0) {
+      console.log('steam found no results');
+      return tasks;
+    }
+
+    const a = $('#search_resultsRows').find('a').first();
     const href = a.attr('href');
     if (!href) return tasks;
 

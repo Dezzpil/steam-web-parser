@@ -5,6 +5,7 @@ import { SearchGrabber } from '../workers/searchGrabber';
 import { TaskType } from '../tools/task';
 import { Browser } from 'puppeteer';
 import { createAppsUrls, findAppByTitle, findRelatedAppsForApps, findAppsBasic } from '../tools/db';
+import { inspect } from 'node:util';
 
 export type SearchSimilarCommonType = {
   id: number;
@@ -85,7 +86,7 @@ async function fetchAndCallback(
 
   try {
     await axios.post(callbackUrl, { results });
-    console.log(`Callback sent to ${callbackUrl}`);
+    console.log(`Callback sent to ${callbackUrl} with result: ${inspect(results, false, 2)}`);
   } catch (err) {
     console.error(`Failed to call callback URL ${callbackUrl}:`, (err as Error).message);
   }
@@ -149,7 +150,31 @@ export async function processAndNotify(browser: Browser, titles: string[], callb
         }
       }
 
-      // 2b. Отбрасывание части после -
+      // 2b. Отбрасывание слова Bundle в конце строки
+      if (foundTasks.length === 0 && /bundle$/i.test(trimmedTitle)) {
+        const titleWithoutBundle = trimmedTitle.replace(/\s*bundle\s*$/i, '').trim();
+        if (titleWithoutBundle) {
+          console.log(`trying heuristic (bundle) for "${trimmedTitle}": ${titleWithoutBundle}`);
+          try {
+            const bundleExistingApp = await findAppByTitle(titleWithoutBundle);
+            if (bundleExistingApp) {
+              foundTasks = [bundleExistingApp];
+            } else {
+              foundTasks = await searchGrabber.searchApps(titleWithoutBundle);
+            }
+            if (foundTasks.length > 0) {
+              currentFoundByTerm = titleWithoutBundle;
+            }
+          } catch (err) {
+            console.error(
+              `error heuristic (bundle) for title "${titleWithoutBundle}":`,
+              (err as Error).message,
+            );
+          }
+        }
+      }
+
+      // 2c. Отбрасывание части после -
       if (foundTasks.length === 0) {
         const hyphenIndex = trimmedTitle.indexOf('-');
         if (hyphenIndex !== -1) {
