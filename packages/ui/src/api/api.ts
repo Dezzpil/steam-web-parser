@@ -5,6 +5,9 @@ import {
   QueueLengthResponse,
   StatsResponse,
   SearchResultsResponse,
+  CrawlingsResponse,
+  ActiveCrawlingResponse,
+  CrawlProcess,
 } from './types';
 
 const API_URL = '/api';
@@ -59,4 +62,44 @@ export async function fetchSearchResults(limit = 20, offset = 0): Promise<Search
     throw new Error('Failed to fetch search results');
   }
   return await response.json();
+}
+
+export async function fetchCrawlings(limit = 20, offset = 0): Promise<CrawlingsResponse> {
+  const response = await fetch(`${API_URL}/crawlings?limit=${limit}&offset=${offset}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch crawlings');
+  }
+  return await response.json();
+}
+
+export async function fetchActiveCrawling(): Promise<ActiveCrawlingResponse> {
+  const response = await fetch(`${API_URL}/crawlings/active`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch active crawling');
+  }
+  return await response.json();
+}
+
+export async function startCrawling(
+  type: string,
+  sortBy: string | null = null,
+): Promise<{ process: CrawlProcess }> {
+  const response = await fetch(`${API_URL}/crawlings/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, sortBy }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(data.error || 'Failed to start crawling');
+  }
+  return await response.json();
+}
+
+export async function stopCrawling(): Promise<void> {
+  const response = await fetch(`${API_URL}/crawlings/stop`, { method: 'POST' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(data.error || 'Failed to stop crawling');
+  }
 }

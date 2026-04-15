@@ -13,6 +13,8 @@ import {
 import { AppGrabber, AppItem } from '../workers/appGrabber';
 import { getNewBrowserPage } from '../tools/browser';
 
+export type CrawlerLogger = (text: string) => void;
+
 export class BaseCrawler {
   private _processed = 0;
   private _queue: QueueObject<TaskType> | null = null;
@@ -24,8 +26,13 @@ export class BaseCrawler {
   private _initialConcurrency = 3;
   private _throttleLevel = 0; // how many steps we throttled
   private _nextRestoreAt = 0; // timestamp ms when we may restore by 1
+  private _logger: CrawlerLogger = (text) => console.log(text);
 
   constructor(private _browser: Browser) {}
+
+  setLogger(logger: CrawlerLogger) {
+    this._logger = logger;
+  }
 
   async init(concurrency = 3, deep = true, forMainLoop = true) {
     this._processed = 0;
@@ -40,7 +47,7 @@ export class BaseCrawler {
       try {
         item = await appGrabber.grabAndParseAppPage(task.href, page);
         app = await insertApp(task.appId, item);
-        console.log(`${task.appId}: "${app.title}" parsed and persisted`);
+        this._logger(`${task.appId}: "${app.title}" parsed and persisted`);
       } catch (e) {
         const err = e as unknown as Error;
         // Dynamic throttling on HTTP 429 or navigation issues
@@ -62,28 +69,28 @@ export class BaseCrawler {
 
       try {
         if (item.linkToMoreLikeThis.trim().length === 0) {
-          console.log(`${task.appId}: no link to more`);
+          this._logger(`${task.appId}: no link to more`);
           await updateAppWithMore(app.id, 0);
           this._processed++;
           return callback && callback();
         }
 
         const tasks = await appGrabber.grabAndParseMorePage(item.linkToMoreLikeThis, page);
-        console.log(`${task.appId}: more ${tasks.length} parsed`);
+        this._logger(`${task.appId}: more ${tasks.length} parsed`);
         await updateAppWithMore(app.id, tasks.length);
 
         if (tasks.length) {
           await linkApps(app.id, tasks);
-          console.log(`${task.appId}: add ${tasks.length} links to app`);
+          this._logger(`${task.appId}: add ${tasks.length} links to app`);
           const newUrls = await createAppsUrls(tasks, app.id, forMainLoop);
           if (newUrls.length) {
             if (task.fromAppId && !deep) {
-              console.log(`${task.appId}: prevent to queue more`);
+              this._logger(`${task.appId}: prevent to queue more`);
               if (!forMainLoop) await updateAppsUrlForMainLoop(newUrls);
               return callback && callback();
             }
             await this._queue!.push(newUrls);
-            console.log(`${task.appId}: more ${newUrls.length} added to queue`);
+            this._logger(`${task.appId}: more ${newUrls.length} added to queue`);
           }
         }
         this._processed++;

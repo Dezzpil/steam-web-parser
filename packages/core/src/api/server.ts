@@ -12,6 +12,9 @@ import {
   countDownloadableContent,
   findAppUrlsFoundBySearch,
 } from '../tools/db';
+import { findCrawlProcesses } from '../tools/crawlProcess';
+import { crawlManager } from '../crawler/manager';
+import { CrawlType, CrawlSortBy } from '../tools/crawlProcess';
 import dotenv from 'dotenv';
 import { createBrowser } from '../tools/browser';
 import { processAndNotify, isCallbackPending, registerCallback } from './searchSimilar';
@@ -20,6 +23,9 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
   const app = express();
   app.use(cors());
   app.use(express.json());
+
+  // Инициализируем менеджер краулинга (помечаем зависшие процессы как завершённые)
+  await crawlManager.init();
 
   const swaggerOptions = {
     definition: {
@@ -122,7 +128,7 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
    *                   type: integer
    */
   app.get('/api/queue/length', (req: Request, res: Response) => {
-    return res.json({ length: q ? q.length() : 0 });
+    return res.json({ length: crawlManager.queueLength });
   });
 
   /**
@@ -413,6 +419,132 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
       status: 'Accepted',
       message: 'Processing started. Results will be sent to the callback URL.',
     });
+  });
+
+  /**
+   * @openapi
+   * /api/crawlings:
+   *   get:
+   *     summary: Получить список краулингов с пагинацией
+   *     parameters:
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *       - in: query
+   *         name: offset
+   *         schema:
+   *           type: integer
+   *           default: 0
+   *     responses:
+   *       200:
+   *         description: Список краулингов и общее кол-во
+   */
+  app.get('/api/crawlings', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const { items, total } = await findCrawlProcesses(limit, offset);
+      return res.json({ items, total });
+    } catch (error) {
+      console.error('Error fetching crawlings:', error);
+      return res.status(500).json({ error: 'Failed to fetch crawlings' });
+    }
+  });
+
+  /**
+   * @openapi
+   * /api/crawlings/active:
+   *   get:
+   *     summary: Получить текущий активный краулинг и сообщения из памяти
+   *     responses:
+   *       200:
+   *         description: Активный краулинг (или null) и список сообщений
+   */
+  app.get('/api/crawlings/active', (req, res) => {
+    return res.json({
+      process: crawlManager.activeProcess,
+      messages: crawlManager.messages,
+    });
+  });
+
+  /**
+   * @openapi
+   * /api/crawlings/start:
+   *   post:
+   *     summary: Запустить краулинг
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [type]
+   *             properties:
+   *               type:
+   *                 type: string
+   *                 enum: [crawl, crawl:top, crawl:catalog]
+   *               sortBy:
+   *                 type: string
+   *                 enum: [Released_DESC, Reviews_DESC]
+   *                 nullable: true
+   *     responses:
+   *       202:
+   *         description: Краулинг запущен
+   *       409:
+   *         description: Краулинг уже запущен
+   *       400:
+   *         description: Неверные параметры
+   */
+  /**
+   * @openapi
+   * /api/crawlings/stop:
+   *   post:
+   *     summary: Остановить активный краулинг
+   *     responses:
+   *       200:
+   *         description: Краулинг остановлен
+   *       404:
+   *         description: Нет активного краулинга
+   */
+  app.post('/api/crawlings/stop', async (req, res) => {
+    if (!crawlManager.isRunning()) {
+      return res.status(404).json({ error: 'Нет активного краулинга' });
+    }
+    try {
+      await crawlManager.stop();
+      return res.json({ ok: true });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return res.status(500).json({ error: msg });
+    }
+  });
+
+  app.post('/api/crawlings/start', async (req, res) => {
+    const { type, sortBy = null } = req.body;
+
+    const validTypes: CrawlType[] = ['crawl', 'crawl:top', 'crawl:catalog'];
+    if (!type || !validTypes.includes(type as CrawlType)) {
+      return res.status(400).json({ error: 'Неверный тип краулинга' });
+    }
+
+    const validSortBy: Array<CrawlSortBy> = ['Released_DESC', 'Reviews_DESC', null];
+    if (!validSortBy.includes(sortBy as CrawlSortBy)) {
+      return res.status(400).json({ error: 'Неверный sortBy' });
+    }
+
+    if (crawlManager.isRunning()) {
+      return res.status(409).json({ error: 'Краулинг уже запущен' });
+    }
+
+    try {
+      const process = await crawlManager.start(type as CrawlType, sortBy as CrawlSortBy);
+      return res.status(202).json({ process });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return res.status(500).json({ error: msg });
+    }
   });
 
   // starting server

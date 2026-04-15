@@ -71,3 +71,31 @@ export interface SearchResultsResponse {
   appUrls: AppUrl[];
   total: number;
 }
+
+export interface CrawlProcess {
+  id: number;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  type: string;
+  sortBy: string | null;
+  status: string;
+  error: string | null;
+  seen: number;
+  added: number;
+}
+
+export interface CrawlMessage {
+  ts: number;
+  text: string;
+}
+
+export interface CrawlingsResponse {
+  items: CrawlProcess[];
+  total: number;
+}
+
+export interface ActiveCrawlingResponse {
+  process: CrawlProcess | null;
+  messages: CrawlMessage[];
+}

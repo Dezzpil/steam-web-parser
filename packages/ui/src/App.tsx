@@ -5,6 +5,7 @@ import { fetchQueueLength, fetchStats } from './api/api';
 import AppList from './pages/AppList';
 import AppDetail from './pages/AppDetail';
 import SearchResults from './pages/SearchResults';
+import Crawlings from './pages/Crawlings';
 
 function App() {
   const [queueLength, setQueueLength] = useState<number | null>(null);
@@ -67,16 +68,23 @@ function App() {
         <Nav className="me-auto" navbar>
           <NavItem>
             <Link className="nav-link" to="/">
-              Apps
+              Приложения
             </Link>
           </NavItem>
           <NavItem>
             <Link className="nav-link" to="/search-results">
-              Search Requests
+              Запросы
+            </Link>
+          </NavItem>
+          <NavItem>
+            <Link className="nav-link" to="/crawlings">
+              Краулинги
             </Link>
           </NavItem>
         </Nav>
-        <div className="d-flex gap-3">
+      </Navbar>
+      <Navbar color={'dark'} light expand="md" container>
+        <div className="d-flex gap-3 mb-1">
           {stats && (
             <>
               <div className="text-light d-flex gap-2 align-items-center">
@@ -106,6 +114,7 @@ function App() {
           <Route path="/" element={<AppList />} />
           <Route path="/app/:id" element={<AppDetail />} />
           <Route path="/search-results" element={<SearchResults />} />
+          <Route path="/crawlings" element={<Crawlings />} />
         </Routes>
       </Container>
     </>
