@@ -38,9 +38,11 @@ export class SearchGrabber extends EventEmitter {
       .split(':');
     if (countDescription && countDescription.length > 1) {
       const parts = countDescription[1].split('.');
-      if (parts.length > 0 && isFinite(+parts[0].trim())) count = +parts[0].trim();
+      if (parts.length > 0 && isFinite(+parts[0].replace(',', '').trim())) {
+        count = +parts[0].replace(',', '').trim();
+      }
     }
-
+    console.log(countDescription, `-> ${count} results`);
     if (count === 0) {
       console.log('steam found no results');
       return tasks;

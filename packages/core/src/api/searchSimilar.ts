@@ -207,6 +207,8 @@ export async function processAndNotify(browser: Browser, titles: string[], callb
       if (currentFoundByTerm && currentFoundByTerm.toLowerCase() !== trimmedTitle.toLowerCase()) {
         foundByAnotherTerm[originalTitle] = currentFoundByTerm;
       }
+    } else {
+      titleToTasks[originalTitle] = [];
     }
   }
 
