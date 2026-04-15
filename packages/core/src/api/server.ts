@@ -16,6 +16,9 @@ import { findCrawlProcesses } from '../tools/crawlProcess';
 import { crawlManager } from '../crawler/manager';
 import { CrawlType, CrawlSortBy } from '../tools/crawlProcess';
 import dotenv from 'dotenv';
+
+dotenv.config();
+
 import { createBrowser } from '../tools/browser';
 import { processAndNotify, isCallbackPending, registerCallback } from './searchSimilar';
 
@@ -37,7 +40,7 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
       },
       servers: [
         {
-          url: `http://localhost:${port}`,
+          url: process.env.API_BASE_URL || `http://localhost:${port}`,
         },
       ],
       components: {
@@ -547,6 +550,19 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
     }
   });
 
+  /**
+   * @openapi
+   * /health:
+   *   get:
+   *     summary: Проверка состояния сервиса
+   *     responses:
+   *       200:
+   *         description: Сервис работает
+   */
+  app.get('/health', (_req, res) => {
+    return res.json({ status: 'ok' });
+  });
+
   // starting server
   return new Promise((resolve) => {
     // Listen on all interfaces to work inside Docker
@@ -556,8 +572,6 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
     });
   });
 }
-
-dotenv.config();
 
 const port = parseInt(process.env.PORT || '3000');
 if (require.main === module) {

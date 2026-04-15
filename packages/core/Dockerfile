@@ -44,12 +44,15 @@ RUN corepack install \
   && pnpm install --frozen-lockfile
 
 COPY packages/core ./packages/core
-
 # Generate Prisma client for core package
-RUN pnpm --filter @steam-web-parser/core run prisma:generate
+# DATABASE_URL is required by prisma.config.ts at generate time (not for actual DB connection)
+ARG DATABASE_URL=postgresql://user:password@localhost:5432/db
+RUN DATABASE_URL=${DATABASE_URL} pnpm --filter @steam-web-parser/core run prisma:generate
 
 # Preinstall Chrome for Puppeteer (v24+ requires explicit browser install)
 RUN pnpm --filter @steam-web-parser/core exec puppeteer browsers install chrome
 
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
 CMD ["pnpm", "--filter", "@steam-web-parser/core", "run", "api"]
