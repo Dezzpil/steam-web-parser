@@ -200,6 +200,33 @@ export async function processAndNotify(browser: Browser, titles: string[], callb
           }
         }
       }
+
+      // 2d. Отбрасывание части после :
+      if (foundTasks.length === 0) {
+        const colonIndex = trimmedTitle.indexOf(':');
+        if (colonIndex !== -1) {
+          const shortTitle = trimmedTitle.substring(0, colonIndex).trim();
+          if (shortTitle) {
+            console.log(`trying heuristic (:) for "${trimmedTitle}": ${shortTitle}`);
+            try {
+              const shortExistingApp = await findAppByTitle(shortTitle);
+              if (shortExistingApp) {
+                foundTasks = [shortExistingApp];
+              } else {
+                foundTasks = await searchGrabber.searchApps(shortTitle);
+              }
+              if (foundTasks.length > 0) {
+                currentFoundByTerm = shortTitle;
+              }
+            } catch (err) {
+              console.error(
+                `error heuristic (:) for short title "${shortTitle}":`,
+                (err as Error).message,
+              );
+            }
+          }
+        }
+      }
     }
 
     if (foundTasks.length > 0) {
