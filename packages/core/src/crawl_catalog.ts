@@ -13,19 +13,23 @@ class CatalogGrabber {
   private _parsed: Set<number>;
   private _pageHeight = 0;
   private _page: Page | undefined;
+  private _sortBy: string;
 
   constructor(
     private _browser: Browser,
     parsed?: Set<number>,
+    sortBy = 'Released_DESC',
   ) {
     this._parsed = parsed || new Set<number>();
+    this._sortBy = sortBy;
   }
 
   private async _ensurePage() {
     if (!this._page) {
       this._page = await getNewBrowserPage(this._browser);
       await this._page.goto(
-        'https://store.steampowered.com/search/?category1=998&ndl=1&ignore_preferences=1',
+        'https://store.steampowered.com/search/?category1=998&ndl=1&ignore_preferences=1&sort_by=' +
+          this._sortBy,
         { waitUntil: 'domcontentloaded' },
       );
     }
