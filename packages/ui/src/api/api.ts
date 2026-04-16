@@ -8,6 +8,9 @@ import {
   CrawlingsResponse,
   ActiveCrawlingResponse,
   CrawlProcess,
+  PriceOnlineProcess,
+  PriceOnlineProcessesResponse,
+  ActivePriceOnlineResponse,
 } from './types';
 
 const API_URL = '/api';
@@ -101,5 +104,41 @@ export async function stopCrawling(): Promise<void> {
   if (!response.ok) {
     const data = await response.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(data.error || 'Failed to stop crawling');
+  }
+}
+
+export async function fetchPriceOnlineProcesses(
+  limit = 20,
+  offset = 0,
+): Promise<PriceOnlineProcessesResponse> {
+  const response = await fetch(`${API_URL}/price-online?limit=${limit}&offset=${offset}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch price-online processes');
+  }
+  return await response.json();
+}
+
+export async function fetchActivePriceOnline(): Promise<ActivePriceOnlineResponse> {
+  const response = await fetch(`${API_URL}/price-online/active`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch active price-online process');
+  }
+  return await response.json();
+}
+
+export async function startPriceOnline(): Promise<{ process: PriceOnlineProcess }> {
+  const response = await fetch(`${API_URL}/price-online/start`, { method: 'POST' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(data.error || 'Failed to start price-online process');
+  }
+  return await response.json();
+}
+
+export async function stopPriceOnline(): Promise<void> {
+  const response = await fetch(`${API_URL}/price-online/stop`, { method: 'POST' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(data.error || 'Failed to stop price-online process');
   }
 }

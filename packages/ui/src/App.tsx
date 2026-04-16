@@ -6,6 +6,7 @@ import AppList from './pages/AppList';
 import AppDetail from './pages/AppDetail';
 import SearchResults from './pages/SearchResults';
 import Crawlings from './pages/Crawlings';
+import PriceAndOnline from './pages/PriceAndOnline';
 
 function App() {
   const [queueLength, setQueueLength] = useState<number | null>(null);
@@ -81,6 +82,11 @@ function App() {
               Краулинги
             </Link>
           </NavItem>
+          <NavItem>
+            <Link className="nav-link" to="/price-and-online">
+              Цена и Онлайн
+            </Link>
+          </NavItem>
         </Nav>
       </Navbar>
       <Navbar color={'dark'} light expand="md" container>
@@ -115,6 +121,7 @@ function App() {
           <Route path="/app/:id" element={<AppDetail />} />
           <Route path="/search-results" element={<SearchResults />} />
           <Route path="/crawlings" element={<Crawlings />} />
+          <Route path="/price-and-online" element={<PriceAndOnline />} />
         </Routes>
       </Container>
     </>

@@ -15,6 +15,8 @@ import {
 import { findCrawlProcesses } from '../tools/crawlProcess';
 import { crawlManager } from '../crawler/manager';
 import { CrawlType, CrawlSortBy } from '../tools/crawlProcess';
+import { findPriceOnlineProcesses } from '../tools/priceOnlineProcess';
+import { priceOnlineManager } from '../crawler/priceOnlineManager';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -29,6 +31,8 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
 
   // Инициализируем менеджер краулинга (помечаем зависшие процессы как завершённые)
   await crawlManager.init();
+  // Инициализируем менеджер сбора цены и онлайна
+  await priceOnlineManager.init();
 
   const swaggerOptions = {
     definition: {
@@ -552,6 +556,102 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
 
   /**
    * @openapi
+   * /api/price-online:
+   *   get:
+   *     summary: Список процессов сбора цены и онлайна
+   *     parameters:
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *       - in: query
+   *         name: offset
+   *         schema:
+   *           type: integer
+   *           default: 0
+   *     responses:
+   *       200:
+   *         description: Список процессов и общее количество
+   */
+  app.get('/api/price-online', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const result = await findPriceOnlineProcesses(limit, offset);
+      return res.json(result);
+    } catch (error) {
+      console.error('Error fetching price-online processes:', error);
+      return res.status(500).json({ error: 'Failed to fetch price-online processes' });
+    }
+  });
+
+  /**
+   * @openapi
+   * /api/price-online/active:
+   *   get:
+   *     summary: Активный процесс сбора цены/онлайна и сообщения из памяти
+   *     responses:
+   *       200:
+   *         description: Активный процесс (или null) и список сообщений
+   */
+  app.get('/api/price-online/active', (req, res) => {
+    return res.json({
+      process: priceOnlineManager.activeProcess,
+      messages: priceOnlineManager.messages,
+    });
+  });
+
+  /**
+   * @openapi
+   * /api/price-online/start:
+   *   post:
+   *     summary: Запустить сбор цены и онлайна
+   *     responses:
+   *       202:
+   *         description: Процесс запущен
+   *       409:
+   *         description: Процесс уже запущен
+   */
+  app.post('/api/price-online/start', async (req, res) => {
+    if (priceOnlineManager.isRunning()) {
+      return res.status(409).json({ error: 'Сбор цены и онлайна уже запущен' });
+    }
+    try {
+      const process = await priceOnlineManager.start();
+      return res.status(202).json({ process });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return res.status(500).json({ error: msg });
+    }
+  });
+
+  /**
+   * @openapi
+   * /api/price-online/stop:
+   *   post:
+   *     summary: Остановить активный сбор цены и онлайна
+   *     responses:
+   *       200:
+   *         description: Процесс остановлен
+   *       404:
+   *         description: Нет активного процесса
+   */
+  app.post('/api/price-online/stop', async (req, res) => {
+    if (!priceOnlineManager.isRunning()) {
+      return res.status(404).json({ error: 'Нет активного процесса сбора цены и онлайна' });
+    }
+    try {
+      await priceOnlineManager.stop();
+      return res.json({ ok: true });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return res.status(500).json({ error: msg });
+    }
+  });
+
+  /**
+   * @openapi
    * /health:
    *   get:
    *     summary: Проверка состояния сервиса
@@ -573,7 +673,7 @@ export async function createWebServer(port: number, q?: any): Promise<Express.Ap
   });
 }
 
-const port = parseInt(process.env.PORT || '3000');
+const port = parseInt(process.env.API_PORT || '3000');
 if (require.main === module) {
   createWebServer(port)
     .then(() => {

@@ -99,3 +99,29 @@ export interface ActiveCrawlingResponse {
   process: CrawlProcess | null;
   messages: CrawlMessage[];
 }
+
+export interface PriceOnlineProcess {
+  id: number;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  status: string;
+  error: string | null;
+  priceCollected: number;
+  onlineCollected: number;
+}
+
+export interface PriceOnlineMessage {
+  ts: number;
+  text: string;
+}
+
+export interface PriceOnlineProcessesResponse {
+  items: PriceOnlineProcess[];
+  total: number;
+}
+
+export interface ActivePriceOnlineResponse {
+  process: PriceOnlineProcess | null;
+  messages: PriceOnlineMessage[];
+}

@@ -17,7 +17,7 @@ import {
 } from '../tools/crawlProcess';
 import { TaskType } from '../tools/task';
 
-const MAX_MESSAGES = 200;
+const MAX_MESSAGES = parseInt(process.env.CRAWL_MAX_MESSAGES || '200', 10);
 
 export interface CrawlMessage {
   ts: number;

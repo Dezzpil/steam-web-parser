@@ -105,3 +105,14 @@ model CrawlProcess {
   seen       Int       @default(0)
   added      Int       @default(0)
 }
+
+model PriceOnlineProcess {
+  id              Int       @id @default(autoincrement())
+  createdAt       DateTime  @default(now())
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  status          String    @default("created")
+  error           String?
+  priceCollected  Int       @default(0)
+  onlineCollected Int       @default(0)
+}
