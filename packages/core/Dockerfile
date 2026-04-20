@@ -28,20 +28,14 @@ RUN apt-get update \
     git \
   && rm -rf /var/lib/apt/lists/*
 
-ENV NODE_ENV=production \
-    PUPPETEER_SKIP_DOWNLOAD=false \
-    PUPPETEER_CACHE_DIR=/tmp/puppeteer \
-    PNPM_HOME=/usr/local/share/pnpm \
-    PATH="/usr/local/share/pnpm:$PATH"
-
 RUN corepack enable
 
 WORKDIR /app
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/core/package.json packages/core/
-RUN corepack install \
-  && pnpm install --frozen-lockfile
+RUN PUPPETEER_SKIP_DOWNLOAD=false corepack install \
+  && PUPPETEER_SKIP_DOWNLOAD=false pnpm install --frozen-lockfile
 
 COPY packages/core ./packages/core
 # Generate Prisma client for core package
@@ -50,7 +44,7 @@ ARG DATABASE_URL=postgresql://user:password@localhost:5432/db
 RUN DATABASE_URL=${DATABASE_URL} pnpm --filter @steam-web-parser/core run prisma:generate
 
 # Preinstall Chrome for Puppeteer (v24+ requires explicit browser install)
-RUN pnpm --filter @steam-web-parser/core exec puppeteer browsers install chrome
+RUN PUPPETEER_CACHE_DIR=/tmp/puppeteer pnpm --filter @steam-web-parser/core exec puppeteer browsers install chrome
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
